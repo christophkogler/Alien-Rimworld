@@ -14,6 +14,7 @@ namespace Xenomorphtype
         private float Ticks = 0;
         private float Progress = 0;
         private float TicksFinish = 300;
+        private const int GainBatchTicks = 10;
         protected float xpPerTick = 0.085f;
         public IntVec3 target
         {
@@ -46,19 +47,50 @@ namespace Xenomorphtype
             {
                 TicksFinish = jellyMaker.JellyFromCell(target)*jellyMaker.WorkPerJelly;
             }
-            Toil toil = ToilMaker.MakeToil("AttemptJellyMaking");
-            toil.atomicWithPrevious = true;
-            toil.tickAction = delegate
+            float cookSpeed = pawn.GetStatValue(ExternalDefOf.CookSpeed);
+            int pendingGainTicks = 0;
+            Action flushPendingGains = delegate
             {
-                Ticks += pawn.GetStatValue(ExternalDefOf.CookSpeed);
+                if (pendingGainTicks <= 0)
+                {
+                    return;
+                }
+
                 if (pawn.skills != null)
                 {
-                    pawn.skills.Learn(SkillDefOf.Cooking, xpPerTick);
+                    pawn.skills.Learn(SkillDefOf.Cooking, xpPerTick * pendingGainTicks);
                 }
-                if (pawn?.needs.joy != null)
+                if (pawn.needs != null && pawn.needs.joy != null)
                 {
-                    pawn.needs.joy.GainJoy(0.001f, InternalDefOf.NestTending);
+                    pawn.needs.joy.GainJoy(0.001f * pendingGainTicks, InternalDefOf.NestTending);
                 }
+                pendingGainTicks = 0;
+            };
+            Toil toil = ToilMaker.MakeToil("AttemptJellyMaking");
+            toil.atomicWithPrevious = true;
+            toil.initAction = delegate
+            {
+                if (TicksFinish <= 0)
+                {
+                    Progress = 1;
+                    ReadyForNextToil();
+                }
+            };
+            toil.tickIntervalAction = delegate (int delta)
+            {
+                if (TicksFinish <= 0)
+                {
+                    Progress = 1;
+                    return;
+                }
+
+                Ticks += cookSpeed * delta;
+                pendingGainTicks += delta;
+                if (pendingGainTicks >= GainBatchTicks)
+                {
+                    flushPendingGains();
+                }
+
                 Progress = (Ticks / TicksFinish);
                 if (Ticks >= TicksFinish)
                 {
@@ -68,6 +100,7 @@ namespace Xenomorphtype
             };
             toil.AddFinishAction(delegate
             {
+                flushPendingGains();
                 CompJellyMaker jellyMaker = pawn.GetComp<CompJellyMaker>();
                 if (jellyMaker != null)
                 {
