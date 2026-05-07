@@ -2224,9 +2224,16 @@ namespace Xenomorphtype
             Job job;
             if (Parent.workSettings.EverWork)
             {
+                HashSet<WorkTypeDef> checkedWorkTypes = new HashSet<WorkTypeDef>();
                 foreach(WorkGiver work in Parent.workSettings.WorkGiversInOrderNormal)
                 {
-                    if(GetNestJobByWorkType(work.def.workType, out job))
+                    WorkTypeDef workType = work?.def?.workType;
+                    if (workType == null || !checkedWorkTypes.Add(workType))
+                    {
+                        continue;
+                    }
+
+                    if(GetNestJobByWorkType(workType, out job))
                     {
                         return job;
                     }    
