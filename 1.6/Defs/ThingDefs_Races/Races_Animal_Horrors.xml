@@ -1719,7 +1719,7 @@
 		</tools>
 		<race>
 		  <body>Snake</body>
-		  <canBePredatorPrey>false</canBePredatorPrey>
+		  <canBePredatorPrey>true</canBePredatorPrey>
 		  <herdMigrationAllowed>false</herdMigrationAllowed>
 		  <deathAction>
 			<workerClass>DeathActionWorker_SmallExplosion</workerClass>
