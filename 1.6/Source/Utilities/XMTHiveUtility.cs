@@ -12,6 +12,7 @@ namespace Xenomorphtype
     public class XMTHiveUtility
     {
         public const float HiveHungerCostPerTick = 0.000085f;
+        private const int CocoonCellRandomSamples = 48;
         protected class NestSite
         {
             public int Suitability;
@@ -910,34 +911,20 @@ namespace Xenomorphtype
 
             Room nestRoom = localNest.Room;
 
-            
-
-            List<IntVec3> cellsToSearch = nestRoom.Cells.ToList();
-
-            cellsToSearch.Shuffle();
-
             if (XMTSettings.LogJobGiver)
             {
-                Log.Message(forPawn + " found nest at room: " + nestRoom + " with cell count of: " + cellsToSearch.Count);
+                Log.Message(forPawn + " found nest at room: " + nestRoom + " with cell count of: " + nestRoom.CellCount);
             }
 
-            foreach (IntVec3 cell in cellsToSearch)
+            if (TryFindRandomCocoonCell(nestRoom, localNest.Position, map, forPawn, out IntVec3 sampledCell))
             {
-                if(IsCellValidCocoon(cell, map))
-                {
-                    if(forPawn != null)
-                    {
-                        if(!FeralJobUtility.IsPlaceAvailableForJobBy(forPawn,cell))
-                        {
-                            continue;
-                        }
-                    }
-                    if (XMTSettings.LogJobGiver)
-                    {
-                        Log.Message(forPawn + " found nest cell for cocoon at: " + cell);
-                    }
-                    return cell;
-                }
+                return sampledCell;
+            }
+
+            int startIndex = nestRoom.CellCount > 0 ? Rand.Range(0, nestRoom.CellCount) : 0;
+            if (TryFindCocoonCellFromIndex(nestRoom, map, forPawn, startIndex, out IntVec3 fallbackCell))
+            {
+                return fallbackCell;
             }
 
             if (XMTSettings.LogJobGiver)
@@ -945,6 +932,95 @@ namespace Xenomorphtype
                 Log.Message(forPawn + " found no valid cells in nest room.");
             }
             return IntVec3.Invalid;
+        }
+
+        private static bool TryFindRandomCocoonCell(Room nestRoom, IntVec3 nestPosition, Map map, Pawn forPawn, out IntVec3 result)
+        {
+            result = IntVec3.Invalid;
+
+            if (nestRoom == null || nestRoom.CellCount <= 0)
+            {
+                return false;
+            }
+
+            int radius = Mathf.Max(3, Mathf.CeilToInt(Mathf.Sqrt(nestRoom.CellCount)));
+            int samples = Mathf.Min(CocoonCellRandomSamples, nestRoom.CellCount);
+
+            for (int i = 0; i < samples; i++)
+            {
+                IntVec3 cell = nestPosition + new IntVec3(Rand.RangeInclusive(-radius, radius), 0, Rand.RangeInclusive(-radius, radius));
+
+                if (!cell.InBounds(map) || cell.GetRoom(map) != nestRoom)
+                {
+                    continue;
+                }
+
+                if (CanUseCocoonCell(cell, map, forPawn))
+                {
+                    result = cell;
+                    LogCocoonCellFound(forPawn, cell);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryFindCocoonCellFromIndex(Room nestRoom, Map map, Pawn forPawn, int startIndex, out IntVec3 result)
+        {
+            result = IntVec3.Invalid;
+
+            int index = 0;
+            foreach (IntVec3 cell in nestRoom.Cells)
+            {
+                if (index++ < startIndex)
+                {
+                    continue;
+                }
+
+                if (CanUseCocoonCell(cell, map, forPawn))
+                {
+                    result = cell;
+                    LogCocoonCellFound(forPawn, cell);
+                    return true;
+                }
+            }
+
+            index = 0;
+            foreach (IntVec3 cell in nestRoom.Cells)
+            {
+                if (index++ >= startIndex)
+                {
+                    break;
+                }
+
+                if (CanUseCocoonCell(cell, map, forPawn))
+                {
+                    result = cell;
+                    LogCocoonCellFound(forPawn, cell);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool CanUseCocoonCell(IntVec3 cell, Map map, Pawn forPawn)
+        {
+            if (!IsCellValidCocoon(cell, map))
+            {
+                return false;
+            }
+
+            return forPawn == null || FeralJobUtility.IsPlaceAvailableForJobBy(forPawn, cell);
+        }
+
+        private static void LogCocoonCellFound(Pawn forPawn, IntVec3 cell)
+        {
+            if (XMTSettings.LogJobGiver)
+            {
+                Log.Message(forPawn + " found nest cell for cocoon at: " + cell);
+            }
         }
         public static Building TryPlaceCocoonBase(IntVec3 startingPosition, Pawn target, float radius = 1.5f)
         {
