@@ -33,6 +33,7 @@ namespace Xenomorphtype
         int canHuntTick = 0;
         int canTendLairTick = 0;
         int canTunnelTick = 0;
+        const float MissingMoodSnuggleChance = 0.05f;
 
         //Taming mechanics
 
@@ -615,13 +616,23 @@ namespace Xenomorphtype
 
             if (Parent.Faction.IsPlayer)
             {
-
-                if (Parent.needs.joy.tolerances.BoredOf(ExternalDefOf.Social))
+                Need_Joy joy = Parent.needs?.joy;
+                if (joy?.tolerances == null)
                 {
                     return false;
                 }
 
-                if (Parent.needs.mood.CurLevelPercentage > 0.5f && Parent.needs.joy.CurLevelPercentage < 0.25)
+                if (joy.tolerances.BoredOf(ExternalDefOf.Social))
+                {
+                    return false;
+                }
+
+                Need_Mood mood = Parent.needs.mood;
+                bool wantsSnuggle = mood != null
+                    ? mood.CurLevelPercentage > 0.5f && joy.CurLevelPercentage < 0.25f
+                    : Rand.Chance(MissingMoodSnuggleChance);
+
+                if (wantsSnuggle)
                 {
                     canNuzzleTick = Find.TickManager.TicksGame + Mathf.CeilToInt(Props.IntervalHours * 2500);
                     return true;
