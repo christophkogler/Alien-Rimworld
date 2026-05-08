@@ -33,6 +33,7 @@ namespace Xenomorphtype
         int canHuntTick = 0;
         int canTendLairTick = 0;
         int canTunnelTick = 0;
+        const float MissingMoodMischiefChance = 0.05f;
 
         //Taming mechanics
 
@@ -568,11 +569,23 @@ namespace Xenomorphtype
             {
                 if (XMTSettings.PlayerSabotage)
                 {
-                    if (Parent.needs.joy.tolerances.BoredOf(ExternalDefOf.Gaming_Dexterity))
+                    Need_Joy joy = Parent.needs?.joy;
+                    if (joy?.tolerances == null)
                     {
                         return false;
                     }
-                    if (Parent.needs.mood.CurLevelPercentage < 0.5f || Parent.needs.joy.CurLevelPercentage < 0.25f)
+
+                    if (joy.tolerances.BoredOf(ExternalDefOf.Gaming_Dexterity))
+                    {
+                        return false;
+                    }
+
+                    Need_Mood mood = Parent.needs.mood;
+                    bool wantsMischief = mood != null
+                        ? mood.CurLevelPercentage < 0.5f || joy.CurLevelPercentage < 0.25f
+                        : Rand.Chance(MissingMoodMischiefChance);
+
+                    if (wantsMischief)
                     {
                         canMischiefTick = Find.TickManager.TicksGame + Mathf.CeilToInt(Props.IntervalHours * 2500);
                         return true;
