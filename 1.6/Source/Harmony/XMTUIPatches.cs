@@ -67,10 +67,13 @@ namespace Xenomorphtype
                     {
 
                         pawn.Map.reservationManager.ReleaseAllForTarget(targetPawn);
-                        if (pawn.Crawling)
+                        if (CompCrawler.IsCrawling(pawn))
                         {
                             CompCrawler compCrawler = pawn.GetComp<CompCrawler>();
-                            compCrawler.Crawling = false;
+                            if (compCrawler != null)
+                            {
+                                compCrawler.Crawling = false;
+                            }
                         }
                         Job job = JobMaker.MakeJob(XenoWorkDefOf.XMT_PerformTrophallaxis, targetPawn);
                         pawn.jobs.StartJob(job, JobCondition.InterruptForced);

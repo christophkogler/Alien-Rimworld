@@ -25,7 +25,7 @@ namespace Xenomorphtype
         {
             get
             {
-                return _crawling;
+                return IsCrawling(Parent);
             }
             set
             {
@@ -33,8 +33,27 @@ namespace Xenomorphtype
                 {
                     Parent.jobs.posture = PawnPosture.Standing;
                 }
+                else
+                {
+                    Parent.jobs.posture = PawnPosture.LayingOnGroundNormal;
+                }
                 _crawling = value;
             }
+        }
+
+        public static bool IsCrawling(Pawn pawn)
+        {
+            if (pawn == null || pawn.Downed || !pawn.health.CanCrawl)
+            {
+                return false;
+            }
+
+            if (!pawn.ageTracker.Adult)
+            {
+                return true;
+            }
+
+            return pawn.GetComp<CompCrawler>()?._crawling == true;
         }
         
 
@@ -94,9 +113,7 @@ namespace Xenomorphtype
                 CrawlAction.icon = StandTexture;
                 CrawlAction.action = delegate
                 {
-                    _crawling = false;
-
-                    Parent.jobs.posture = PawnPosture.Standing;
+                    Crawling = false;
 
                 };
 
@@ -110,7 +127,7 @@ namespace Xenomorphtype
                 CrawlAction.icon = CrawlTexture;
                 CrawlAction.action = delegate
                 {
-                    _crawling = true;
+                    Crawling = true;
                 };
 
                 yield return CrawlAction;

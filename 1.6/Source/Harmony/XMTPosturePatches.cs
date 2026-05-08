@@ -25,7 +25,7 @@ namespace Xenomorphtype
                 }
 
                 float speed = __instance.GetStatValue(StatDefOf.MoveSpeed);
-                if (__instance.Crawling)
+                if (CompCrawler.IsCrawling(__instance))
                 {
                     speed = __instance.GetStatValue(StatDefOf.CrawlSpeed);
                 }
@@ -85,50 +85,6 @@ namespace Xenomorphtype
 
                 __result = true;
                 return false;
-            }
-        }
-
-        [HarmonyPatch(typeof(Pawn), "Crawling", MethodType.Getter)]
-        public static class Patch_Pawn_Crawling
-        {
-            [HarmonyPrefix]
-            public static bool Prefix(ref bool __result, Pawn __instance)
-            {
-                if (__instance.Downed)
-                {
-                    return true;
-                }
-
-                if (!XMTUtility.IsXenomorph(__instance))
-                {
-                    return true;
-                }
-
-                if (!__instance.health.CanCrawl)
-                {
-                    __result = false;
-                    return false;
-                }
-
-                if (!__instance.ageTracker.Adult)
-                {
-                    __result = true;
-                    __instance.jobs.posture = PawnPosture.LayingOnGroundNormal;
-                    return false;
-                }
-
-                CompCrawler compCrawler = __instance.GetComp<CompCrawler>();
-
-                if (compCrawler != null)
-                {
-                    __result = compCrawler.Crawling;
-                    if (__result)
-                    {
-                        __instance.jobs.posture = PawnPosture.LayingOnGroundNormal;
-                        return false;
-                    }
-                }
-                return true;
             }
         }
 

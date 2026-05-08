@@ -817,10 +817,13 @@ namespace Xenomorphtype
         {
             if (Parent.needs.food == null || Parent.needs.food.CurLevelPercentage == 1)
             {
-                if (Parent.Crawling)
+                if (CompCrawler.IsCrawling(Parent))
                 {
                     CompCrawler compCrawler = Parent.GetComp<CompCrawler>();
-                    compCrawler.Crawling = false;
+                    if (compCrawler != null)
+                    {
+                        compCrawler.Crawling = false;
+                    }
                 }
 
                 Job job = null;
