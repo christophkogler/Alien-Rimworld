@@ -233,34 +233,35 @@ namespace Xenomorphtype
                 canRefillDispenser: false, canUseInventory: true, canUsePackAnimalInventory: false,
                 allowForbidden: !caresAboutForbidden, allowCorpse: true, allowSociallyImproper: true, allowHarvest: false, forceScanWholeMap: true, ignoreReservations: true, calculateWantedStackCount: false, allowVenerated: true))
             {
-                IEnumerable<Pawn> SuitablePrey = pawn.Map.spawnedThings.OfType<Pawn>().Where(p => !XMTUtility.NotPrey(p) && !XMTUtility.IsInorganic(p));
-                if (SuitablePrey.Any())
+                int distance = int.MaxValue;
+                foreach (Pawn prey in pawn.Map.mapPawns.AllPawnsSpawned)
                 {
-                    int distance = int.MaxValue;
-                    foreach(Pawn prey in SuitablePrey)
+                    if (XMTUtility.NotPrey(prey) || XMTUtility.IsInorganic(prey))
                     {
-                        if(caresAboutForbidden)
+                        continue;
+                    }
+
+                    if(caresAboutForbidden)
+                    {
+                        if(prey.IsForbidden(pawn))
                         {
-                            if(prey.IsForbidden(pawn))
-                            {
-                                continue;
-                            }
-                            if(!prey.PositionHeld.InAllowedArea(pawn))
-                            {
-                                continue;
-                            }
+                            continue;
                         }
-
-                        int preydistance = prey.PositionHeld.DistanceToSquared(pawn.Position);
-
-                        if(preydistance < distance)
+                        if(!prey.PositionHeld.InAllowedArea(pawn))
                         {
-                            preydistance = distance;
-                            foodSource = prey;
+                            continue;
                         }
+                    }
 
+                    int preydistance = prey.PositionHeld.DistanceToSquared(pawn.Position);
+
+                    if(preydistance < distance)
+                    {
+                        distance = preydistance;
+                        foodSource = prey;
                     }
                 }
+
                 if(foodSource == null)
                 {
                     return null;
