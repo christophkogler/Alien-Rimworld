@@ -408,7 +408,7 @@ namespace Xenomorphtype
             if (!foundFoodSource)
             {
                 int distance = int.MaxValue;
-                foreach(Pawn prey in pawn.Map.spawnedThings.OfType<Pawn>())
+                foreach (Pawn prey in pawn.Map.mapPawns.AllPawnsSpawned)
                 {
                     if (prey == null || prey == pawn || !prey.Spawned || prey.Dead || XMTUtility.NotPrey(prey) || XMTUtility.IsInorganic(prey))
                     {
