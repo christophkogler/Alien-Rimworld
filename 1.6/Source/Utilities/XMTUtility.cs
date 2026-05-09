@@ -192,6 +192,122 @@ namespace Xenomorphtype
             part = targetPart;
             return found;
         }
+
+        public static List<BodyPartRecord> NonOverlappingBodyParts(IEnumerable<BodyPartRecord> parts)
+        {
+            if (parts == null)
+            {
+                return new List<BodyPartRecord>();
+            }
+
+            List<BodyPartRecord> distinctParts = parts.Where(x => x != null).Distinct().ToList();
+            return distinctParts.Where(x => !HasAncestorInList(x, distinctParts)).ToList();
+        }
+
+        public static void CleanupDevelopmentHediffs(Pawn pawn)
+        {
+            if (pawn?.health?.hediffSet?.hediffs == null)
+            {
+                return;
+            }
+
+            List<Hediff> developmentHediffs = pawn.health.hediffSet.hediffs
+                .Where(x => x.def == InternalDefOf.Undeveloped || x.def == InternalDefOf.Overdeveloped)
+                .ToList();
+
+            if (!developmentHediffs.Any())
+            {
+                return;
+            }
+
+            if (pawn.ageTracker?.Adult == true)
+            {
+                RemoveHediffs(pawn, developmentHediffs);
+                return;
+            }
+
+            HashSet<Hediff> remove = new HashSet<Hediff>();
+            foreach (Hediff hediff in developmentHediffs)
+            {
+                if (hediff.Part == null || hediff.Severity >= 1f)
+                {
+                    remove.Add(hediff);
+                }
+            }
+
+            foreach (IGrouping<BodyPartRecord, Hediff> partGroup in developmentHediffs.GroupBy(x => x.Part))
+            {
+                foreach (IGrouping<HediffDef, Hediff> defGroup in partGroup.GroupBy(x => x.def))
+                {
+                    Hediff keep = null;
+                    foreach (Hediff hediff in defGroup)
+                    {
+                        if (keep == null || hediff.Severity > keep.Severity)
+                        {
+                            keep = hediff;
+                        }
+                    }
+
+                    foreach (Hediff hediff in defGroup)
+                    {
+                        if (hediff != keep)
+                        {
+                            remove.Add(hediff);
+                        }
+                    }
+                }
+            }
+
+            foreach (Hediff hediff in developmentHediffs)
+            {
+                if (HasDevelopmentAncestor(hediff, developmentHediffs))
+                {
+                    remove.Add(hediff);
+                }
+            }
+
+            RemoveHediffs(pawn, remove);
+        }
+
+        private static bool HasAncestorInList(BodyPartRecord part, List<BodyPartRecord> parts)
+        {
+            for (BodyPartRecord ancestor = part.parent; ancestor != null; ancestor = ancestor.parent)
+            {
+                if (parts.Contains(ancestor))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasDevelopmentAncestor(Hediff hediff, List<Hediff> developmentHediffs)
+        {
+            if (hediff.Part == null)
+            {
+                return false;
+            }
+
+            for (BodyPartRecord ancestor = hediff.Part.parent; ancestor != null; ancestor = ancestor.parent)
+            {
+                if (developmentHediffs.Any(x => x != hediff && x.def == hediff.def && x.Part == ancestor && x.Severity >= hediff.Severity))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void RemoveHediffs(Pawn pawn, IEnumerable<Hediff> hediffs)
+        {
+            foreach (Hediff hediff in hediffs.Where(x => x != null).Distinct().ToList())
+            {
+                pawn.health.RemoveHediff(hediff);
+            }
+        }
+
         public static Thing TrySpawnPawnFromTarget(Pawn pawn, Thing target)
         {
             if (XMTSettings.LogBiohorror)
