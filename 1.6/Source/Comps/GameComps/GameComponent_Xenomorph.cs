@@ -70,6 +70,7 @@ namespace Xenomorphtype
         float MutationProliferation = 0;
 
         int nextXenoformingTick = -1;
+        int nextStarbeastOrganismCleanupTick = -1;
 
         private const float XenomorphImpact = 1f;
         private const float OvomorphSaturationLimit = 5;
@@ -77,6 +78,7 @@ namespace Xenomorphtype
         private const float EmbryoSaturationLimit = 10;
         private const float EmbryoImpact = 0.5f;
         private const float QueenAidImpact = 0f;
+        private const int StarbeastOrganismCleanupInterval = 2500;
 
         private int _xenoformingStartTick = -1;
 
@@ -148,6 +150,8 @@ namespace Xenomorphtype
         {
             base.GameComponentTick();
 
+            CleanupStaleStarbeastOrganismMarkers();
+
             if (_xenoforming <= 0)
             {
                 return;
@@ -188,6 +192,33 @@ namespace Xenomorphtype
                 BiomeXenoformingImpact();
                 LaunchCachedReprisal();
                 
+            }
+        }
+
+        private void CleanupStaleStarbeastOrganismMarkers()
+        {
+            int tick = Find.TickManager.TicksGame;
+            if (tick < nextStarbeastOrganismCleanupTick)
+            {
+                return;
+            }
+
+            nextStarbeastOrganismCleanupTick = tick + StarbeastOrganismCleanupInterval;
+
+            List<Pawn> pawns = PawnsFinder.AllMapsWorldAndTemporary_Alive;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn pawn = pawns[i];
+                if (pawn == null || pawn.health == null || pawn.GetPerfectComp() != null)
+                {
+                    continue;
+                }
+
+                Hediff staleOrganism = pawn.health.hediffSet.GetFirstHediffOfDef(InternalDefOf.StarbeastOrganism);
+                if (staleOrganism != null)
+                {
+                    pawn.health.RemoveHediff(staleOrganism);
+                }
             }
         }
 
