@@ -96,6 +96,7 @@ namespace Xenomorphtype
         int IntervalCheck => Mathf.CeilToInt(Props.IntervalHours * 2500);
 
         int DailyCheck => 60000;
+        int DevelopmentCleanupCheck => 2500;
 
         bool lairUnloaded = true;
 
@@ -185,6 +186,11 @@ namespace Xenomorphtype
             if (Parent == null)
             {
                 return;
+            }
+
+            if (Parent.IsHashIntervalTick(DevelopmentCleanupCheck))
+            {
+                XMTUtility.CleanupDevelopmentHediffs(Parent);
             }
 
             if(Parent.IsHashIntervalTick(DailyCheck))
