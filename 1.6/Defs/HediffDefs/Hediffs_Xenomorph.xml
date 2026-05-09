@@ -65,7 +65,7 @@
     <defName>StarbeastOrganism</defName>
     <label>perfect</label>
     <description>this being is a perfectly adaptable organism.</description>
-    <hediffClass>HediffWithComps</hediffClass>
+    <hediffClass>Hediff</hediffClass>
     <makesSickThought>false</makesSickThought>
     <makesAlert>false</makesAlert>
 	<tendable>false</tendable>
@@ -115,11 +115,6 @@
         </makeImmuneTo>
       </li>
     </stages>
-    <comps>
-		<li Class="Xenomorphtype.HediffCompProperties_RemoveOnXenomorph">
-			<ifXenomorph>false</ifXenomorph>
-		</li>
-    </comps>
   </HediffDef>
   
   <HediffDef ParentName="XenomorphtypeBase">
