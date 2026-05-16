@@ -26,8 +26,7 @@ namespace Xenomorphtype
         protected override IEnumerable<Toil> MakeNewToils()
         {
             this.FailOnDestroyedOrNull(HostInd);
-            this.FailOnAggroMentalState(HostInd);
-            this.AddFailCondition(() => failedGrab || !IsReleasableHost(Host) || !FinalGoalCell.IsValid);
+            this.AddFailCondition(() => failedGrab || !IsValidHost(Host) || !FinalGoalCell.IsValid);
 
             yield return Toils_Goto.GotoThing(HostInd, PathEndMode.ClosestTouch);
             yield return AttemptGrab();
@@ -78,7 +77,7 @@ namespace Xenomorphtype
             {
                 if (pawn.carryTracker.CarriedThing != null)
                 {
-                    pawn.carryTracker.TryDropCarriedThing(FinalGoalCell, ThingPlaceMode.Near, out Thing _);
+                    pawn.carryTracker.TryDropCarriedThing(FinalGoalCell, ThingPlaceMode.Direct, out Thing _);
                 }
             };
             toil.defaultCompleteMode = ToilCompleteMode.Instant;
@@ -126,10 +125,15 @@ namespace Xenomorphtype
 
         private static bool IsReleasableHost(Pawn host)
         {
+            return IsValidHost(host)
+                && XMTUtility.IsCocooned(host);
+        }
+
+        private static bool IsValidHost(Pawn host)
+        {
             return host != null
                 && !host.Dead
-                && !XMTUtility.IsXenomorph(host)
-                && XMTUtility.IsCocooned(host);
+                && !XMTUtility.IsXenomorph(host);
         }
     }
 }
