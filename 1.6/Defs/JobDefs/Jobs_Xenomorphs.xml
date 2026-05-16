@@ -50,8 +50,8 @@
 	</JobDef>
 
 	<JobDef>
-		<defName>XMT_ReleasePrisoner</defName>
-		<driverClass>Xenomorphtype.JobDriver_ReleasePrisonerByXenomorph</driverClass>
+		<defName>XMT_ReleaseHost</defName>
+		<driverClass>Xenomorphtype.JobDriver_ReleaseHostByXenomorph</driverClass>
 		<reportString>releasing TargetA.</reportString>
 		<casualInterruptible>false</casualInterruptible>
 		<checkOverrideOnDamage>OnlyIfInstigatorNotJobTarget</checkOverrideOnDamage>

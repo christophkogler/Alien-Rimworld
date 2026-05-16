@@ -1885,7 +1885,7 @@ namespace Xenomorphtype
             return false;
         }
 
-        public bool GetReleasePrisonerJob(out Job job)
+        public bool GetReleaseHostJob(out Job job)
         {
             job = null;
 
@@ -1893,29 +1893,29 @@ namespace Xenomorphtype
 
             if (releaseTargets.Any())
             {
-                List<Designation> prisoners = releaseTargets.ToList();
-                prisoners.Shuffle();
+                List<Designation> hosts = releaseTargets.ToList();
+                hosts.Shuffle();
 
-                foreach (Designation release in prisoners)
+                foreach (Designation release in hosts)
                 {
-                    if (!release.target.TryGetPawn(out Pawn prisoner) || !prisoner.IsPrisonerOfColony)
+                    if (!release.target.TryGetPawn(out Pawn host) || !IsReleasableHost(host))
                     {
                         continue;
                     }
 
-                    if (!FeralJobUtility.IsThingAvailableForJobBy(Parent, prisoner))
+                    if (!FeralJobUtility.IsThingAvailableForJobBy(Parent, host))
                     {
                         continue;
                     }
 
-                    if (!TryFindReleaseCell(prisoner, out IntVec3 releaseCell))
+                    if (!TryFindReleaseCell(host, out IntVec3 releaseCell))
                     {
                         continue;
                     }
 
-                    job = JobMaker.MakeJob(XenoWorkDefOf.XMT_ReleasePrisoner, prisoner, releaseCell);
+                    job = JobMaker.MakeJob(XenoWorkDefOf.XMT_ReleaseHost, host, releaseCell);
                     FeralJobUtility.ReservePlaceForJob(Parent, job, releaseCell);
-                    FeralJobUtility.ReserveThingForJob(Parent, job, prisoner);
+                    FeralJobUtility.ReserveThingForJob(Parent, job, host);
                     job.count = 1;
                     return true;
                 }
@@ -1924,9 +1924,17 @@ namespace Xenomorphtype
             return false;
         }
 
-        private bool TryFindReleaseCell(Pawn prisoner, out IntVec3 releaseCell)
+        private static bool IsReleasableHost(Pawn host)
         {
-            return RCellFinder.TryFindEdgeCellFromPositionAvoidingColony(prisoner.PositionHeld, Parent.Map, delegate (IntVec3 cell)
+            return host != null
+                && !host.Dead
+                && !XMTUtility.IsXenomorph(host)
+                && XMTUtility.IsCocooned(host);
+        }
+
+        private bool TryFindReleaseCell(Pawn host, out IntVec3 releaseCell)
+        {
+            return RCellFinder.TryFindEdgeCellFromPositionAvoidingColony(host.PositionHeld, Parent.Map, delegate (IntVec3 cell)
             {
                 return cell.Standable(Parent.Map)
                     && !cell.Fogged(Parent.Map)
@@ -2040,7 +2048,7 @@ namespace Xenomorphtype
                     return true;
                 }
 
-                if (GetReleasePrisonerJob(out job))
+                if (GetReleaseHostJob(out job))
                 {
                     return true;
                 }
@@ -2054,7 +2062,7 @@ namespace Xenomorphtype
 
             if (workType == XenoWorkDefOf.Warden)
             {
-                if (GetReleasePrisonerJob(out job))
+                if (GetReleaseHostJob(out job))
                 {
                     return true;
                 }

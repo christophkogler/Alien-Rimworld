@@ -6,7 +6,7 @@ using Verse;
 
 namespace Xenomorphtype
 {
-    internal class Designator_ReleasePrisoner : Designator
+    internal class Designator_ReleaseHost : Designator
     {
         public override bool DragDrawMeasurements => true;
         public override DrawStyleCategoryDef DrawStyleCategory => DrawStyleCategoryDefOf.Areas;
@@ -29,10 +29,10 @@ namespace Xenomorphtype
             }
         }
 
-        public Designator_ReleasePrisoner()
+        public Designator_ReleaseHost()
         {
-            defaultLabel = "XMT_CommandReleasePrisoner".Translate();
-            defaultDesc = "XMT_CommandReleasePrisonerDescription".Translate();
+            defaultLabel = "XMT_CommandReleaseHost".Translate();
+            defaultDesc = "XMT_CommandReleaseHostDescription".Translate();
             icon = ContentFinder<Texture2D>.Get("UI/Designators/Break");
             soundDragSustain = SoundDefOf.Designate_DragStandard;
             soundDragChanged = SoundDefOf.Designate_DragStandard_Changed;
@@ -48,9 +48,9 @@ namespace Xenomorphtype
                 return false;
             }
 
-            if (!ReleasablePrisonersInCell(c).Any())
+            if (!ReleasableHostsInCell(c).Any())
             {
-                return "XMT_MessageMustDesignateReleasablePrisoner".Translate();
+                return "XMT_MessageMustDesignateReleasableHost".Translate();
             }
 
             return true;
@@ -58,15 +58,15 @@ namespace Xenomorphtype
 
         public override void DesignateSingleCell(IntVec3 loc)
         {
-            foreach (Pawn prisoner in ReleasablePrisonersInCell(loc))
+            foreach (Pawn host in ReleasableHostsInCell(loc))
             {
-                DesignateThing(prisoner);
+                DesignateThing(host);
             }
         }
 
         public override AcceptanceReport CanDesignateThing(Thing t)
         {
-            if (t is Pawn pawn && pawn.IsPrisonerOfColony && !pawn.Dead && base.Map.designationManager.DesignationOn(pawn, Designation) == null)
+            if (t is Pawn pawn && IsReleasableHost(pawn) && base.Map.designationManager.DesignationOn(pawn, Designation) == null)
             {
                 return true;
             }
@@ -80,7 +80,7 @@ namespace Xenomorphtype
             base.Map.designationManager.AddDesignation(new Designation(t, Designation));
         }
 
-        private IEnumerable<Pawn> ReleasablePrisonersInCell(IntVec3 c)
+        private IEnumerable<Pawn> ReleasableHostsInCell(IntVec3 c)
         {
             if (c.Fogged(base.Map))
             {
@@ -95,6 +95,14 @@ namespace Xenomorphtype
                     yield return (Pawn)thingList[i];
                 }
             }
+        }
+
+        private static bool IsReleasableHost(Pawn pawn)
+        {
+            return pawn != null
+                && !pawn.Dead
+                && !XMTUtility.IsXenomorph(pawn)
+                && XMTUtility.IsCocooned(pawn);
         }
     }
 }
