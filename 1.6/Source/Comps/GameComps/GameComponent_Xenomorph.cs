@@ -606,7 +606,7 @@ namespace Xenomorphtype
         internal void ReleaseEmbryoOnWorld(Pawn pawn)
         {
             
-            _xenoforming = Mathf.Min(_xenoforming,Mathf.Min(EmbryoSaturationLimit, _xenoforming + (EmbryoImpact)));
+            _xenoforming = Mathf.Max(_xenoforming, Mathf.Min(EmbryoSaturationLimit, _xenoforming + EmbryoImpact));
             if (XMTSettings.LogWorld)
             {
                 Log.Message("Adjusting Xenoforming for " + pawn + " leaving the map with an embryo. total: " + _xenoforming);
