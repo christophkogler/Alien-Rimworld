@@ -48,6 +48,18 @@
 		<carryThingAfterJob>true</carryThingAfterJob>
 		<suspendable>false</suspendable>
 	</JobDef>
+
+	<JobDef>
+		<defName>XMT_ReleasePrisoner</defName>
+		<driverClass>Xenomorphtype.JobDriver_ReleasePrisonerByXenomorph</driverClass>
+		<reportString>releasing TargetA.</reportString>
+		<casualInterruptible>false</casualInterruptible>
+		<checkOverrideOnDamage>OnlyIfInstigatorNotJobTarget</checkOverrideOnDamage>
+		<allowOpportunisticPrefix>true</allowOpportunisticPrefix>
+		<neverFleeFromEnemies>true</neverFleeFromEnemies>
+		<carryThingAfterJob>true</carryThingAfterJob>
+		<suspendable>false</suspendable>
+	</JobDef>
 	
 		<JobDef>
 		<defName>XMT_CocoonTarget</defName>
