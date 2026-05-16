@@ -11,6 +11,38 @@ namespace Xenomorphtype
 {
     internal class XMTHealthPatches
     {
+        [HarmonyPatch(typeof(PawnCapacityUtility), nameof(PawnCapacityUtility.CalculateNaturalPartsAverageEfficiency), new Type[] { typeof(HediffSet), typeof(BodyPartGroupDef) })]
+        public static class Patch_PawnCapacityUtility_CalculateNaturalPartsAverageEfficiency
+        {
+            [HarmonyPrefix]
+            public static bool Prefix(HediffSet __0, BodyPartGroupDef __1, ref float __result)
+            {
+                if (StarbeastCapacityCache.TryGetNaturalPartsAverageEfficiency(__0, __1, out float efficiency))
+                {
+                    __result = efficiency;
+                    return false;
+                }
+
+                return true;
+            }
+
+            [HarmonyPostfix]
+            public static void Postfix(HediffSet __0, BodyPartGroupDef __1, float __result)
+            {
+                StarbeastCapacityCache.StoreNaturalPartsAverageEfficiency(__0, __1, __result);
+            }
+        }
+
+        [HarmonyPatch(typeof(HediffSet), nameof(HediffSet.DirtyCache))]
+        public static class Patch_HediffSet_DirtyCache
+        {
+            [HarmonyPostfix]
+            public static void Postfix(HediffSet __instance)
+            {
+                StarbeastCapacityCache.Invalidate(__instance);
+            }
+        }
+
         [HarmonyPatch(typeof(TendUtility), nameof(TendUtility.DoTend))]
         public static class Patch_TendUtility_DoTend
         {
@@ -96,6 +128,7 @@ namespace Xenomorphtype
             [HarmonyPostfix]
             public static void Postfix(Hediff hediff, DamageInfo? dinfo, DamageWorker.DamageResult damageResult, HediffSet __instance)
             {
+                StarbeastCapacityCache.Invalidate(__instance);
                 Pawn pawn = __instance.pawn;
                 if (pawn != null)
                 {
@@ -134,6 +167,7 @@ namespace Xenomorphtype
             [HarmonyPostfix]
             public static void Postfix(Hediff hediff, Pawn ___pawn)
             {
+                StarbeastCapacityCache.Invalidate(___pawn);
                 if (___pawn != null)
                 {
                     CompPawnInfo info = ___pawn.Info();

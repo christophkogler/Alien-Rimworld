@@ -14,6 +14,7 @@ namespace Xenomorphtype
             [HarmonyPostfix]
             public static void Postfix(Pawn __instance)
             {
+                StarbeastCapacityCache.Invalidate(__instance);
                 PawnCacheWrapper.Cleanup(__instance);
             }
         }
