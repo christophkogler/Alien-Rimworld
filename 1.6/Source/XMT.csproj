@@ -111,7 +111,7 @@
     <Compile Include="AI\JobDriver\Queen\JobDriver_MutateTarget.cs" />
     <Compile Include="AI\JobDriver\Ritual\JobDriver_PrepareChrysalisWithJelly.cs" />
     <Compile Include="AI\JobDriver\WorkJobs\JobDriver_AbductHost.cs" />
-    <Compile Include="AI\JobDriver\WorkJobs\JobDriver_ReleasePrisonerByXenomorph.cs" />
+    <Compile Include="AI\JobDriver\WorkJobs\JobDriver_ReleaseHostByXenomorph.cs" />
     <Compile Include="AI\JobDriver\Queen\JobDriver_AlterGenes.cs" />
     <Compile Include="AI\JobDriver\WorkJobs\JobDriver_ApplyLarder.cs" />
     <Compile Include="AI\JobDriver\WorkJobs\JobDriver_ApplyOvomorph.cs" />
@@ -410,7 +410,7 @@
     <Compile Include="Things\StarbeastCorpse.cs" />
     <Compile Include="Things\PawnCache.cs" />
     <Compile Include="UI\Designators\Designator_Abduct.cs" />
-    <Compile Include="UI\Designators\Designator_ReleasePrisoner.cs" />
+    <Compile Include="UI\Designators\Designator_ReleaseHost.cs" />
     <Compile Include="UI\Designators\Designator_Art.cs" />
     <Compile Include="UI\Designators\Designator_ScentFoe.cs" />
     <Compile Include="UI\Designators\Designator_ScentFriend.cs" />

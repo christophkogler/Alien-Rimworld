@@ -46,7 +46,7 @@ namespace Xenomorphtype
         public static JobDef XMT_ImplantHunt;
         public static JobDef XMT_StealthHunt;
         public static JobDef XMT_AbductHost;
-        public static JobDef XMT_ReleasePrisoner;
+        public static JobDef XMT_ReleaseHost;
         public static JobDef XMT_CocoonTarget;
         public static JobDef XMT_ApplyOvomorphing;
         public static JobDef XMT_ApplyLardering;

@@ -5,9 +5,9 @@ using Verse.AI;
 
 namespace Xenomorphtype
 {
-    public class JobDriver_ReleasePrisonerByXenomorph : JobDriver_ClimbToPosition
+    public class JobDriver_ReleaseHostByXenomorph : JobDriver_ClimbToPosition
     {
-        private const TargetIndex PrisonerInd = TargetIndex.A;
+        private const TargetIndex HostInd = TargetIndex.A;
         private const TargetIndex ReleaseCellInd = TargetIndex.B;
         private const float GrabTicksFinish = 30f;
 
@@ -16,7 +16,7 @@ namespace Xenomorphtype
         private bool failedGrab;
 
         protected override IntVec3 FinalGoalCell => job.GetTarget(ReleaseCellInd).Cell;
-        private Pawn Prisoner => job.GetTarget(PrisonerInd).Pawn;
+        private Pawn Host => job.GetTarget(HostInd).Pawn;
 
         public override bool TryMakePreToilReservations(bool errorOnFailed)
         {
@@ -25,16 +25,16 @@ namespace Xenomorphtype
 
         protected override IEnumerable<Toil> MakeNewToils()
         {
-            this.FailOnDestroyedOrNull(PrisonerInd);
-            this.FailOnAggroMentalState(PrisonerInd);
-            this.AddFailCondition(() => failedGrab || Prisoner == null || !Prisoner.IsPrisonerOfColony || !FinalGoalCell.IsValid);
+            this.FailOnDestroyedOrNull(HostInd);
+            this.FailOnAggroMentalState(HostInd);
+            this.AddFailCondition(() => failedGrab || !IsReleasableHost(Host) || !FinalGoalCell.IsValid);
 
-            yield return Toils_Goto.GotoThing(PrisonerInd, PathEndMode.ClosestTouch);
+            yield return Toils_Goto.GotoThing(HostInd, PathEndMode.ClosestTouch);
             yield return AttemptGrab();
-            yield return Toils_Haul.StartCarryThing(PrisonerInd);
+            yield return Toils_Haul.StartCarryThing(HostInd);
             yield return Toils_Haul.CarryHauledThingToCell(ReleaseCellInd, PathEndMode.OnCell);
-            yield return DropPrisoner();
-            yield return ReleasePrisoner();
+            yield return DropHost();
+            yield return ReleaseHost();
         }
 
         private Toil AttemptGrab()
@@ -44,7 +44,7 @@ namespace Xenomorphtype
             toil.initAction = delegate
             {
                 CompMatureMorph matureMorph = pawn.GetMorphComp();
-                if (matureMorph != null && !matureMorph.InitiateGrabCheck(Prisoner))
+                if (matureMorph != null && !matureMorph.InitiateGrabCheck(Host))
                 {
                     failedGrab = true;
                 }
@@ -63,17 +63,17 @@ namespace Xenomorphtype
                 CompMatureMorph matureMorph = pawn.GetMorphComp();
                 if (matureMorph != null && grabProgress >= 1f && !failedGrab)
                 {
-                    matureMorph.TryGrab(Prisoner);
+                    matureMorph.TryGrab(Host);
                 }
             });
-            toil.WithProgressBar(PrisonerInd, () => grabProgress);
+            toil.WithProgressBar(HostInd, () => grabProgress);
             toil.defaultCompleteMode = ToilCompleteMode.Never;
             return toil;
         }
 
-        private Toil DropPrisoner()
+        private Toil DropHost()
         {
-            Toil toil = ToilMaker.MakeToil("DropReleasedPrisoner");
+            Toil toil = ToilMaker.MakeToil("DropReleasedHost");
             toil.initAction = delegate
             {
                 if (pawn.carryTracker.CarriedThing != null)
@@ -85,34 +85,51 @@ namespace Xenomorphtype
             return toil;
         }
 
-        private Toil ReleasePrisoner()
+        private Toil ReleaseHost()
         {
-            Toil toil = ToilMaker.MakeToil("ReleasePrisoner");
+            Toil toil = ToilMaker.MakeToil("ReleaseHost");
             toil.initAction = delegate
             {
-                Pawn prisoner = Prisoner;
-                if (prisoner == null)
+                Pawn host = Host;
+                if (host == null)
                 {
                     return;
                 }
 
-                prisoner.MapHeld.designationManager.TryRemoveDesignationOn(prisoner, XenoWorkDefOf.XMT_Release);
-                GenGuest.PrisonerRelease(prisoner);
-
-                if (!PawnBanishUtility.WouldBeLeftToDie(prisoner, prisoner.Map.Tile))
+                host.MapHeld.designationManager.TryRemoveDesignationOn(host, XenoWorkDefOf.XMT_Release);
+                Hediff cocoon = host.health.hediffSet.GetFirstHediffOfDef(InternalDefOf.StarbeastCocoon);
+                if (cocoon != null)
                 {
-                    GenGuest.AddHealthyPrisonerReleasedThoughts(prisoner);
+                    host.health.RemoveHediff(cocoon);
                 }
 
-                QuestUtility.SendQuestTargetSignals(prisoner.questTags, "Released", prisoner.Named("SUBJECT"));
-
-                if (prisoner.Spawned && prisoner.Position.OnEdge(prisoner.Map))
+                if (host.IsPrisonerOfColony)
                 {
-                    prisoner.ExitMap(false, Rot4.Invalid);
+                    GenGuest.PrisonerRelease(host);
+
+                    if (!PawnBanishUtility.WouldBeLeftToDie(host, host.Map.Tile))
+                    {
+                        GenGuest.AddHealthyPrisonerReleasedThoughts(host);
+                    }
+                }
+
+                QuestUtility.SendQuestTargetSignals(host.questTags, "Released", host.Named("SUBJECT"));
+
+                if (host.Spawned && host.Position.OnEdge(host.Map))
+                {
+                    host.ExitMap(false, Rot4.Invalid);
                 }
             };
             toil.defaultCompleteMode = ToilCompleteMode.Instant;
             return toil;
+        }
+
+        private static bool IsReleasableHost(Pawn host)
+        {
+            return host != null
+                && !host.Dead
+                && !XMTUtility.IsXenomorph(host)
+                && XMTUtility.IsCocooned(host);
         }
     }
 }
