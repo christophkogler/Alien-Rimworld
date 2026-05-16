@@ -224,6 +224,7 @@
     <Compile Include="Utilities\ClimbUtility.cs" />
     <Compile Include="Utilities\FeralJobUtility.cs" />
     <Compile Include="Utilities\ResearchUtility.cs" />
+    <Compile Include="Utilities\StarbeastCapacityCache.cs" />
     <Compile Include="BioHorror\XMT_GeneSetDef.cs" />
     <Compile Include="Building\Fillable\FillableChrysalis.cs" />
     <Compile Include="Building\Horrors\Petrolsump.cs" />
