@@ -104,6 +104,11 @@
 	
 	<XMT_MessageMustDesignateAbductable>Must designate a living target.</XMT_MessageMustDesignateAbductable>
 	<XMT_TextMote_AbductGrappleResisted>Resisted\n{0} resist chance\n{1} success chance</XMT_TextMote_AbductGrappleResisted>
+
+	<XMT_CommandReleasePrisoner>Release Prisoner</XMT_CommandReleasePrisoner>
+	<XMT_CommandReleasePrisonerDescription>Designate prisoners for release at the map edge.</XMT_CommandReleasePrisonerDescription>
+
+	<XMT_MessageMustDesignateReleasablePrisoner>Must designate prisoner of the colony.</XMT_MessageMustDesignateReleasablePrisoner>
 	
 	<XMT_CommandInvestigateSite>Investigate Settlement</XMT_CommandInvestigateSite>
 	<XMT_CommandInvestigateSiteDesc>No one seems to be home? that's odd.</XMT_CommandInvestigateSiteDesc>
