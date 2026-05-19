@@ -22,13 +22,14 @@ namespace Xenomorphtype
 
         protected float initialFoodPercentage;
         private int nextRecipientWaitRefreshTick;
+        protected bool successfulFeedingComplete;
 
         protected bool recipientStored => recipient.Map != pawn.Map;
         protected Pawn recipient => (Pawn)base.TargetThingA;
 
         protected IEnumerable<Toil> FeedRecipient()
         {
-            AddFailCondition(() => pawn.needs.food.CurCategory == HungerCategory.Starving);
+            AddFailCondition(() => pawn.needs.food != null && pawn.needs.food.CurCategory == HungerCategory.Starving);
             yield return Mouthfeed();
         }
 
@@ -37,14 +38,26 @@ namespace Xenomorphtype
             Toil toil = ToilMaker.MakeToil("Trophallaxis");
             toil.initAction = delegate
             {
+                successfulFeedingComplete = false;
                 initialFoodPercentage = recipient.needs.food.CurLevelPercentage;
                 ForceRecipientWait();
             };
-            toil.tickAction = delegate
+            toil.tickIntervalAction = delegate (int delta)
             {
-                
+                if (pawn == null || pawn.Destroyed)
+                {
+                    return;
+                }
+
+                if (recipient == null || recipient.Destroyed || recipient.needs?.food == null)
+                {
+                    pawn.jobs.EndCurrentJob(JobCondition.Incompletable);
+                    return;
+                }
+
                 float nutritionWanted = recipient.needs.food.NutritionWanted;
-                float gained = pawn.needs.food == null ? Mathf.Min(recipient.needs.food.MaxLevel / 1250f, nutritionWanted) : Mathf.Min(Mathf.Min(recipient.needs.food.MaxLevel / 1250f, nutritionWanted), pawn.needs.food.CurLevel);
+                float nutritionPerInterval = recipient.needs.food.MaxLevel / 1250f * delta;
+                float gained = pawn.needs.food == null ? Mathf.Min(nutritionPerInterval, nutritionWanted) : Mathf.Min(Mathf.Min(nutritionPerInterval, nutritionWanted), pawn.needs.food.CurLevel);
                 float lost = gained;
 
                 recipient.needs.food.CurLevel += gained;
@@ -55,13 +68,34 @@ namespace Xenomorphtype
 
                 ForceRecipientWait();
 
-                if (recipient.needs.food.CurLevelPercentage >= 0.75f|| pawn.needs.food.CurCategory == HungerCategory.Starving)
+                if (recipient.needs.food.CurLevelPercentage >= 0.75f || (pawn.needs.food != null && pawn.needs.food.CurCategory == HungerCategory.Starving))
                 {
+                    successfulFeedingComplete = true;
                     ReadyForNextToil();
                 }
             };
-            toil.AddFinishAction(delegate
+            toil.WithProgressBar((recipientStored) ? TargetIndex.B : TargetIndex.A, () => recipient.needs.food.CurLevelPercentage);
+            toil.defaultCompleteMode = ToilCompleteMode.Never;
+            toil.WithEffect(EffecterDefOf.Breastfeeding, (recipientStored) ? TargetIndex.B : TargetIndex.A);
+            return toil;
+        }
+
+        private Toil FinishTrophallaxis()
+        {
+            Toil toil = ToilMaker.MakeToil("FinishTrophallaxis");
+            toil.initAction = delegate
             {
+                if (pawn == null || pawn.Destroyed)
+                {
+                    return;
+                }
+
+                if (!successfulFeedingComplete || recipient == null || recipient.Destroyed || recipient.needs?.food == null)
+                {
+                    pawn.jobs.EndCurrentJob(JobCondition.Incompletable);
+                    return;
+                }
+
                 if (pawn.needs.joy != null) {
                     pawn.needs.joy.GainJoy(0.12f, InternalDefOf.Communion);
                 }
@@ -69,21 +103,25 @@ namespace Xenomorphtype
                 if(pawn.GetComp<CompJellyMaker>() is CompJellyMaker jellyMaker)
                 {
                     ThingDef jellyDef = jellyMaker.GetJellyProduct();
-                    if (jellyDef.ingestible.outcomeDoers != null)
+                    List<IngestionOutcomeDoer> outcomeDoers = jellyDef?.ingestible?.outcomeDoers;
+                    if (outcomeDoers != null)
                     {
-                        recipient.mindState.lastIngestTick = Find.TickManager.TicksGame;
                         Thing jellyThing = ThingMaker.MakeThing(jellyDef);
+                        recipient.mindState.lastIngestTick = Find.TickManager.TicksGame;
                         recipient.needs.drugsDesire?.Notify_IngestedDrug(jellyThing);
 
-                        List<Hediff> hediffs = recipient.health.hediffSet.hediffs;
-                        for (int k = 0; k < hediffs.Count; k++)
+                        List<Hediff> hediffs = recipient.health?.hediffSet?.hediffs;
+                        if (hediffs != null)
                         {
-                            hediffs[k].Notify_IngestedThing(jellyThing, 1);
+                            for (int k = 0; k < hediffs.Count; k++)
+                            {
+                                hediffs[k].Notify_IngestedThing(jellyThing, 1);
+                            }
                         }
 
-                        for (int l = 0; l < jellyDef.ingestible.outcomeDoers.Count; l++)
+                        for (int l = 0; l < outcomeDoers.Count; l++)
                         {
-                            jellyDef.ingestible.outcomeDoers[l].DoIngestionOutcome(recipient, jellyThing, 1);
+                            outcomeDoers[l].DoIngestionOutcome(recipient, jellyThing, 1);
                         }
                     }
                 }
@@ -135,10 +173,9 @@ namespace Xenomorphtype
                     recipient.jobs.EndCurrentJob(JobCondition.Succeeded);
                 }
 
-            });
-            toil.WithProgressBar((recipientStored) ? TargetIndex.B : TargetIndex.A, () => recipient.needs.food.CurLevelPercentage);
-            toil.defaultCompleteMode = ToilCompleteMode.Never;
-            toil.WithEffect(EffecterDefOf.Breastfeeding, (recipientStored) ? TargetIndex.B : TargetIndex.A);
+                successfulFeedingComplete = false;
+            };
+            toil.defaultCompleteMode = ToilCompleteMode.Instant;
             return toil;
         }
 
@@ -170,12 +207,14 @@ namespace Xenomorphtype
             {
                 yield return feedRecipientEnumerator.Current;
             }
+            yield return FinishTrophallaxis();
         }
 
         public override void ExposeData()
         {
             base.ExposeData();
             Scribe_Values.Look(ref initialFoodPercentage, "initialFoodPercentage", 0f);
+            Scribe_Values.Look(ref successfulFeedingComplete, "successfulFeedingComplete", false);
         }
 
         public override bool TryMakePreToilReservations(bool errorOnFailed)
