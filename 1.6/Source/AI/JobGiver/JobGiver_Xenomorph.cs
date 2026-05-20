@@ -128,7 +128,7 @@ namespace Xenomorphtype
 
             CompMatureMorph compMatureMorph = pawn.GetMorphComp();
 
-            bool shouldOvomorph = compMatureMorph.ShouldOvomorphCandidate();
+            bool shouldOvomorph = compMatureMorph != null && compMatureMorph.ShouldOvomorphCandidate();
             bool hasCocoonedHosts = XMTHiveUtility.HasCocooned(pawn.Map);
             bool hasNest = hasCocoonedHosts || XMTHiveUtility.HasLocalNest(pawn.Map);
 
@@ -710,7 +710,10 @@ namespace Xenomorphtype
 
                         if (compMatureMorph.NestPosition.InSunlight(pawn.Map))
                         {
-                            pawn.needs.rest.CurLevel = 0.25f;
+                            if (pawn.needs?.rest != null)
+                            {
+                                pawn.needs.rest.CurLevel = 0.25f;
+                            }
                         }
 
                         return XMTHiveUtility.GetHiveRestJob(pawn);
