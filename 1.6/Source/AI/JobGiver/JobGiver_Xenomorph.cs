@@ -48,14 +48,14 @@ namespace Xenomorphtype
             IEnumerable<Pawn> colonyPawns = pawn.Map.PlayerPawnsForStoryteller.Where(x => XMTUtility.TriggersOvomorph(x));
             IEnumerable<Pawn> hostPawns = pawn.Map.mapPawns.AllPawnsSpawned.Where(x => XMTUtility.TriggersOvomorph(x));
             Need_Food food = pawn.needs.food;
-            bool desperate = pawn.needs.food.CurCategory == HungerCategory.Starving;
+            bool desperate = food != null && food.CurCategory == HungerCategory.Starving;
 
             CompMatureMorph compMatureMorph = pawn.GetMorphComp();
 
-            bool shouldOvomorph = compMatureMorph.ShouldOvomorphCandidate();
+            bool shouldOvomorph = compMatureMorph != null && compMatureMorph.ShouldOvomorphCandidate();
             bool hasNest = XMTHiveUtility.HasCocooned(pawn.Map);
 
-            if (food.CurCategory == HungerCategory.Fed)
+            if (food == null || food.CurCategory == HungerCategory.Fed)
             {
                 if (XMTSettings.LogJobGiver)
                 {
@@ -158,7 +158,7 @@ namespace Xenomorphtype
                             return JobMaker.MakeJob(XenoWorkDefOf.XMT_StealthHunt, target);
 
                         }
-                        else if (pawn.needs.rest.CurLevelPercentage < 0.25f)
+                        else if (pawn.needs.rest != null && pawn.needs.rest.CurLevelPercentage < 0.25f)
                         {
                             if (XMTSettings.LogJobGiver)
                             {
@@ -485,7 +485,10 @@ namespace Xenomorphtype
 
                         if (compMatureMorph.NestPosition.InSunlight(pawn.Map))
                         {
-                            pawn.needs.rest.CurLevel = 0.25f;
+                            if (pawn.needs.rest != null)
+                            {
+                                pawn.needs.rest.CurLevel = 0.25f;
+                            }
                             if (pawn.InBed())
                             {
                                 return JobMaker.MakeJob(JobDefOf.Wait_Asleep);
