@@ -1,9 +1,6 @@
 ﻿using RimWorld;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using UnityEngine;
 using Verse.AI;
 using Verse;
 
@@ -11,11 +8,10 @@ namespace Xenomorphtype
 {
     public class JobDriver_ProduceJelly : JobDriver_ClimbToPosition
     {
-        private float Ticks = 0;
-        private float Progress = 0;
-        private float TicksFinish = 300;
-        private const int GainBatchTicks = 10;
-        private bool jellyConverted = false;
+        private float Ticks = 0f;
+        private float Progress = 0f;
+        private float TicksFinish = 300f;
+        private bool converted = false;
         protected float xpPerTick = 0.085f;
         public IntVec3 target
         {
@@ -35,50 +31,27 @@ namespace Xenomorphtype
             return targetInfo.IsValid && targetInfo.Cell.IsValid && targetInfo.Cell.InBounds(pawn.Map);
         }
 
-        private CompJellyMaker GetValidJellyMaker()
-        {
-            if (!HasValidTargetCell())
-            {
-                return null;
-            }
-
-            return pawn.GetComp<CompJellyMaker>();
-        }
-
-        private float ClampedProgress()
-        {
-            if (Progress <= 0f)
-            {
-                return 0f;
-            }
-            if (Progress >= 1f)
-            {
-                return 1f;
-            }
-            return Progress;
-        }
-
         private void TryConvertWorkedJelly()
         {
-            if (jellyConverted || Ticks <= 0f)
+            if (converted || Ticks <= 0f)
             {
                 return;
             }
 
-            CompJellyMaker jellyMaker = GetValidJellyMaker();
+            CompJellyMaker jellyMaker = pawn.GetComp<CompJellyMaker>();
             if (jellyMaker == null)
             {
                 return;
             }
 
-            float progress = ClampedProgress();
-            if (progress <= 0f)
+            float conversionProgress = Mathf.Clamp(Progress, 0f, 1f);
+            if (conversionProgress <= 0f)
             {
                 return;
             }
 
-            jellyConverted = true;
-            jellyMaker.ConvertToJelly(target, progress);
+            converted = true;
+            jellyMaker.ConvertToJelly(target, conversionProgress);
         }
 
         public override bool TryMakePreToilReservations(bool errorOnFailed)
@@ -101,53 +74,42 @@ namespace Xenomorphtype
 
         private Toil BeginProducingJelly()
         {
-            CompJellyMaker jellyMaker = GetValidJellyMaker();
-            if (jellyMaker != null)
-            {
-                TicksFinish = jellyMaker.JellyFromCell(target)*jellyMaker.WorkPerJelly;
-            }
-            int pendingGainTicks = 0;
-            Action flushPendingGains = delegate
-            {
-                if (pendingGainTicks <= 0)
-                {
-                    return;
-                }
-
-                if (pawn?.skills != null)
-                {
-                    pawn.skills.Learn(SkillDefOf.Cooking, xpPerTick * pendingGainTicks);
-                }
-                if (pawn?.needs?.joy != null)
-                {
-                    pawn.needs.joy.GainJoy(0.001f * pendingGainTicks, InternalDefOf.NestTending);
-                }
-                pendingGainTicks = 0;
-            };
             Toil toil = ToilMaker.MakeToil("AttemptJellyMaking");
             toil.atomicWithPrevious = true;
             toil.initAction = delegate
             {
-                if (GetValidJellyMaker() == null || TicksFinish <= 0)
+                CompJellyMaker jellyMaker = pawn.GetComp<CompJellyMaker>();
+                if (!HasValidTargetCell() || jellyMaker == null)
+                {
+                    EndJobWith(JobCondition.Incompletable);
+                    return;
+                }
+
+                TicksFinish = jellyMaker.JellyFromCell(target)*jellyMaker.WorkPerJelly;
+                if (TicksFinish <= 0f)
                 {
                     EndJobWith(JobCondition.Incompletable);
                 }
             };
             toil.tickIntervalAction = delegate (int delta)
             {
-                if (GetValidJellyMaker() == null)
+                if (!HasValidTargetCell())
                 {
                     EndJobWith(JobCondition.Incompletable);
                     return;
                 }
 
                 Ticks += pawn.GetStatValue(ExternalDefOf.CookSpeed) * delta;
-                pendingGainTicks += delta;
-                if (pendingGainTicks >= GainBatchTicks)
+                if (pawn?.skills != null)
                 {
-                    flushPendingGains();
+                    pawn.skills.Learn(SkillDefOf.Cooking, xpPerTick * delta);
                 }
-                Progress = (Ticks / TicksFinish);
+                if (pawn?.needs?.joy != null)
+                {
+                    pawn.needs.joy.GainJoy(0.001f * delta, InternalDefOf.NestTending);
+                }
+
+                Progress = Ticks / TicksFinish;
                 if (Ticks >= TicksFinish)
                 {
                     Progress = 1f;
@@ -158,7 +120,6 @@ namespace Xenomorphtype
             };
             toil.AddFinishAction(delegate
             {
-                flushPendingGains();
                 TryConvertWorkedJelly();
             });
             toil.WithProgressBar(TargetIndex.A, () => Progress);
