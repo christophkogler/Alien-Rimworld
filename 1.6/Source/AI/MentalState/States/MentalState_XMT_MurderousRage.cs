@@ -70,6 +70,24 @@ namespace Xenomorphtype
             }
         }
 
+        public bool TrySetTarget(Thing preferredTarget)
+        {
+            if (XMTUtility.IsXenomorph(pawn) || pawn.Info().IsObsessed())
+            {
+                if (!XMTMentalStateUtility.IsValidXenoEnemyTarget(pawn, preferredTarget))
+                {
+                    return false;
+                }
+            }
+            else if (!(preferredTarget is Pawn preferredPawn) || !XMTUtility.IsXenomorph(preferredPawn) || !pawn.CanReach(preferredPawn, PathEndMode.Touch, Danger.Deadly))
+            {
+                return false;
+            }
+
+            target = preferredTarget;
+            return true;
+        }
+
         public bool IsTargetStillValidAndReachable()
         {
             if (target != null && target.SpawnedParentOrMe != null && (!(target.SpawnedParentOrMe is Pawn) || target.SpawnedParentOrMe == target))

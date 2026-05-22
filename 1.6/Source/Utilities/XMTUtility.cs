@@ -994,6 +994,26 @@ namespace Xenomorphtype
             return (IsCocooned(target) || IsMorphing(target) || HasEmbryo(target) || IsXenomorph(target) || IsXenomorphFriendly(target) || !target.RaceProps.canBePredatorPrey);
         }
 
+        internal static bool IsExplicitXenoMeleeTarget(Pawn attacker, Thing target)
+        {
+            if (!IsXenomorph(attacker) || !IsXenomorph(target))
+            {
+                return false;
+            }
+
+            if (attacker.MentalStateDef == MentalStateDefOf.SocialFighting)
+            {
+                return true;
+            }
+
+            if (attacker.MentalState is MentalState_XMT_MurderousRage rage)
+            {
+                return rage.target == target || rage.target?.SpawnedParentOrMe == target;
+            }
+
+            return false;
+        }
+
         public static bool IsXenomorphFriendly(Pawn target)
         {
             CompPawnInfo info = target.Info();
@@ -2015,7 +2035,7 @@ namespace Xenomorphtype
                             if(aggressorInfo.parent.Faction == witness.Faction && aggressorInfo.XenomorphPheromoneValue() <= -1f)
                             {
                                 Messages.Message("XMT_DefendHive".Translate(witness.LabelShort), MessageTypeDefOf.PositiveEvent);
-                                witness.mindState.mentalStateHandler.TryStartMentalState(XenoMentalStateDefOf.XMT_MurderousRage, "", forced: true, forceWake: true, causedByMood: false, transitionSilently: true);
+                                StartMurderousRage(witness, aggressorInfo.parent);
                             }
                         }
                         else
@@ -2024,10 +2044,19 @@ namespace Xenomorphtype
                             {
                                 Messages.Message("XMT_DefendHive".Translate(witness.LabelShort), MessageTypeDefOf.PositiveEvent);
                             }
-                            witness.mindState.mentalStateHandler.TryStartMentalState(XenoMentalStateDefOf.XMT_MurderousRage, "", forced: true, forceWake: true, causedByMood: false, transitionSilently: true);
+                            StartMurderousRage(witness, aggressorInfo.parent);
                         }
                     }
                 }
+            }
+        }
+
+        private static void StartMurderousRage(Pawn witness, Thing preferredTarget)
+        {
+            if (witness.mindState.mentalStateHandler.TryStartMentalState(XenoMentalStateDefOf.XMT_MurderousRage, "", forced: true, forceWake: true, causedByMood: false, transitionSilently: true)
+                && witness.MentalState is MentalState_XMT_MurderousRage rage)
+            {
+                rage.TrySetTarget(preferredTarget);
             }
         }
 
