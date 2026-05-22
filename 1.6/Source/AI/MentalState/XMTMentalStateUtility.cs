@@ -56,6 +56,39 @@ namespace Xenomorphtype
             tmpTargets.Clear();
             return result;
         }
+        public static bool IsValidXenoEnemyTarget(Pawn pawn, Thing target)
+        {
+            if (pawn == null || target == null || !pawn.Spawned)
+            {
+                return false;
+            }
+
+            if (target is Pawn targetPawn)
+            {
+                if (targetPawn.Dead || targetPawn.Downed)
+                {
+                    return false;
+                }
+
+                if (targetPawn.CurJob != null && targetPawn.CurJob.exitMapOnArrival)
+                {
+                    return false;
+                }
+
+                if (XMTUtility.IsXenomorph(pawn) && (XMTUtility.IsXenomorphFriendly(targetPawn) || XMTUtility.IsMorphing(targetPawn) || XMTUtility.HasEmbryo(targetPawn) || XMTUtility.IsXenomorph(targetPawn)))
+                {
+                    return false;
+                }
+            }
+
+            if (target is Building_TurretGun turret && (!turret.Active || turret.IsMannable))
+            {
+                return false;
+            }
+
+            return pawn.CanReach(target, PathEndMode.Touch, Danger.Deadly);
+        }
+
         public static Thing FindXenoEnemyToKill(Pawn pawn)
         {
             if (!pawn.Spawned)
@@ -63,19 +96,12 @@ namespace Xenomorphtype
                 return null;
             }
 
-            bool KillerIsXenomorph = XMTUtility.IsXenomorph(pawn);
-
             List<Thing> tmpTargets = new List<Thing>();
             IReadOnlyList<Pawn> allPawnsSpawned = pawn.Map.mapPawns.AllPawnsSpawned;
             for (int i = 0; i < allPawnsSpawned.Count; i++)
             {
                 Pawn candidate = allPawnsSpawned[i];
-                if (KillerIsXenomorph && ( XMTUtility.IsXenomorphFriendly(candidate) || XMTUtility.IsMorphing(candidate) || XMTUtility.HasEmbryo(candidate) || XMTUtility.IsXenomorph(candidate)))
-                {
-                    continue;
-                }
-
-                if ( pawn.CanReach(candidate, PathEndMode.Touch, Danger.Deadly) && (candidate.CurJob == null || !candidate.CurJob.exitMapOnArrival))
+                if (IsValidXenoEnemyTarget(pawn, candidate))
                 {
                     tmpTargets.Add(candidate);
                 }
@@ -87,12 +113,7 @@ namespace Xenomorphtype
             {
                 Building_TurretGun candidate = turrets[i];
 
-                if(!candidate.Active || candidate.IsMannable)
-                {
-                    continue;
-                }
-   
-                if (pawn.CanReach(candidate, PathEndMode.Touch, Danger.Deadly))
+                if (IsValidXenoEnemyTarget(pawn, candidate))
                 {
                     tmpTargets.Add(candidate);
                 }
@@ -128,8 +149,6 @@ namespace Xenomorphtype
                     CompPawnInfo info = targetPawn.Info();
                     if (info != null)
                     {
-
-
                         pheromone = info.XenomorphPheromoneValue();
                         if (target.HostileTo(pawn))
                         {
