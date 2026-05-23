@@ -29,24 +29,27 @@ namespace Xenomorphtype
 
         public bool IsNoLongerValidTarget()
         {
-            return XMTUtility.HasEmbryo(Prey);
+            Pawn prey = Prey;
+            return prey == null || prey.Destroyed || XMTUtility.HasEmbryo(prey);
         }
 
         protected override IEnumerable<Toil> MakeNewToils()
         {
+            this.FailOnDestroyedOrNull(TargetIndex.A);
             AddFailCondition(IsNoLongerValidTarget);
             Toil toil = Toils_Goto.GotoThing(TargetIndex.A, PathEndMode.ClosestTouch).FailOn(() => Find.TickManager.TicksGame > startTick + 5000 && (float)(job.GetTarget(TargetIndex.A).Cell - pawn.Position).LengthHorizontalSquared > 4f);
             yield return toil;
             yield return AttemptInjection();
+            yield return FinishInjection();
         }
 
         private Toil AttemptInjection()
         {
             Toil toil = ToilMaker.MakeToil("AttemptGrab");
             toil.atomicWithPrevious = true;
-            toil.tickAction = delegate
+            toil.tickIntervalAction = delegate (int delta)
             {
-                Ticks += 1;
+                Ticks += delta;
                 Progress = (Ticks / TicksFinish);
                 if (Ticks >= TicksFinish)
                 {
@@ -54,21 +57,36 @@ namespace Xenomorphtype
                 }
 
             };
-            toil.AddFinishAction(delegate
-            {
-                if (Progress >= 1)
-                {
-                    Pawn prey = Prey;
-                    CompMatureMorph matureMorph = pawn.GetMorphComp();
-                    if (matureMorph != null)
-                    {
-                        matureMorph.TryLardering(prey);
-                    }
-                }
-            });
             toil.WithProgressBar(TargetIndex.A, () => Progress);
             toil.WithEffect(EffecterDefOf.Surgery, TargetIndex.A);
             toil.defaultCompleteMode = ToilCompleteMode.Never;
+            return toil;
+        }
+
+        private Toil FinishInjection()
+        {
+            Toil toil = ToilMaker.MakeToil("FinishInjection");
+            toil.initAction = delegate
+            {
+                Pawn actor = toil.actor;
+                Pawn prey = job.GetTarget(TargetIndex.A).Thing as Pawn;
+
+                if (actor == null || actor.Destroyed || actor.Map == null || prey == null || prey.Destroyed || prey.Map == null || prey.Map != actor.Map || XMTUtility.HasEmbryo(prey))
+                {
+                    actor?.jobs?.EndCurrentJob(JobCondition.Incompletable);
+                    return;
+                }
+
+                CompMatureMorph matureMorph = actor.GetMorphComp();
+                if (matureMorph == null)
+                {
+                    actor.jobs.EndCurrentJob(JobCondition.Incompletable);
+                    return;
+                }
+
+                matureMorph.TryLardering(prey);
+            };
+            toil.defaultCompleteMode = ToilCompleteMode.Instant;
             return toil;
         }
     }
