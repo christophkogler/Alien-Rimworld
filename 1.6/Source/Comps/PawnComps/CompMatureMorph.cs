@@ -1885,6 +1885,63 @@ namespace Xenomorphtype
             return false;
         }
 
+        public bool GetReleaseHostJob(out Job job)
+        {
+            job = null;
+
+            IEnumerable<Designation> releaseTargets = Parent.Map.designationManager.SpawnedDesignationsOfDef(XenoWorkDefOf.XMT_Release);
+
+            if (releaseTargets.Any())
+            {
+                List<Designation> hosts = releaseTargets.ToList();
+                hosts.Shuffle();
+
+                foreach (Designation release in hosts)
+                {
+                    if (!release.target.TryGetPawn(out Pawn host) || !IsReleasableHost(host))
+                    {
+                        continue;
+                    }
+
+                    if (!FeralJobUtility.IsThingAvailableForJobBy(Parent, host))
+                    {
+                        continue;
+                    }
+
+                    if (!TryFindReleaseCell(host, out IntVec3 releaseCell))
+                    {
+                        continue;
+                    }
+
+                    job = JobMaker.MakeJob(XenoWorkDefOf.XMT_ReleaseHost, host, releaseCell);
+                    FeralJobUtility.ReservePlaceForJob(Parent, job, releaseCell);
+                    FeralJobUtility.ReserveThingForJob(Parent, job, host);
+                    job.count = 1;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsReleasableHost(Pawn host)
+        {
+            return host != null
+                && !host.Dead
+                && !XMTUtility.IsXenomorph(host)
+                && XMTUtility.IsCocooned(host);
+        }
+
+        private bool TryFindReleaseCell(Pawn host, out IntVec3 releaseCell)
+        {
+            return RCellFinder.TryFindEdgeCellFromPositionAvoidingColony(host.PositionHeld, Parent.Map, delegate (IntVec3 cell)
+            {
+                return cell.Standable(Parent.Map)
+                    && !cell.Fogged(Parent.Map)
+                    && Parent.CanReach(cell, PathEndMode.OnCell, Danger.Deadly, canBashDoors: true, canBashFences: true);
+            }, out releaseCell);
+        }
+
 
         public bool GetCocoonPrisonerJob(out Job job)
         {
@@ -1991,6 +2048,11 @@ namespace Xenomorphtype
                     return true;
                 }
 
+                if (GetReleaseHostJob(out job))
+                {
+                    return true;
+                }
+
                 if(GetAbductJob(out job))
                 {
                     return true;
@@ -2000,6 +2062,11 @@ namespace Xenomorphtype
 
             if (workType == XenoWorkDefOf.Warden)
             {
+                if (GetReleaseHostJob(out job))
+                {
+                    return true;
+                }
+
                 if (Parent.needs.food != null && Parent.needs.food.CurLevelPercentage == 1)
                 {
                     if (GetFeedJob(out job))
