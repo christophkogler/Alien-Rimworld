@@ -22,6 +22,13 @@ namespace Xenomorphtype
 
 
         }
+
+        public override void PostSpawnSetup(bool respawningAfterLoad)
+        {
+            base.PostSpawnSetup(respawningAfterLoad);
+            EnsureStarbeastOrganism();
+        }
+
         public override float GetStatFactor(StatDef stat)
         {
             if (stat == StatDefOf.LeatherAmount)
@@ -96,16 +103,21 @@ namespace Xenomorphtype
                             hediffs[num].Tended(TendingQualityRange.RandomInRange, TendingQualityRange.TrueMax, 1);
                         }
                     }
-                    
+
+                    EnsureStarbeastOrganism();
                 }
-                
-                if(pawn.health.hediffSet.HasHediff(InternalDefOf.StarbeastOrganism))
-                {
-                    return;
-                }
-                Hediff perfection = HediffMaker.MakeHediff(InternalDefOf.StarbeastOrganism, pawn);
-                pawn.health.hediffSet.AddDirect(perfection);
             }
+        }
+
+        private void EnsureStarbeastOrganism()
+        {
+            if (pawn == null || pawn.health == null || pawn.health.hediffSet.HasHediff(InternalDefOf.StarbeastOrganism))
+            {
+                return;
+            }
+
+            Hediff perfection = HediffMaker.MakeHediff(InternalDefOf.StarbeastOrganism, pawn);
+            pawn.health.hediffSet.AddDirect(perfection);
         }
     }
 
