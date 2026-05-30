@@ -44,6 +44,36 @@ namespace Xenomorphtype
         {
             return FailedGrab;
         }
+
+        private bool TryCommitGrab()
+        {
+            Pawn actor = pawn;
+            Pawn victim = Victim;
+            if (actor == null || actor.Destroyed || actor.Dead || !actor.Spawned || actor.Map == null || actor.mindState == null)
+            {
+                return false;
+            }
+
+            if (victim == null || victim.Destroyed || victim.Dead || !victim.Spawned || victim.health == null)
+            {
+                return false;
+            }
+
+            if (actor.Map != victim.Map || !actor.Position.AdjacentTo(victim.Position))
+            {
+                return false;
+            }
+
+            CompMatureMorph matureMorph = actor.GetMorphComp();
+            if (matureMorph == null)
+            {
+                return false;
+            }
+
+            matureMorph.TryGrab(victim);
+            return true;
+        }
+
         protected override IEnumerable<Toil> MakeNewToils()
         {
             this.AddFailCondition(IsNoLongerValidTarget);
@@ -71,27 +101,22 @@ namespace Xenomorphtype
                     }
                 }
             };
-            toil.tickAction = delegate
+            toil.tickIntervalAction = delegate (int delta)
             {
-                GrabTicks += 1;
+                GrabTicks += delta;
                 GrabProgress = (GrabTicks / GrabTicksFinish);
                 if (GrabTicks >= GrabTicksFinish)
                 {
+                    if (!TryCommitGrab())
+                    {
+                        EndJobWith(JobCondition.Incompletable);
+                        return;
+                    }
+
                     ReadyForNextToil();
                 }
 
             };
-            toil.AddFinishAction(delegate
-            {
-                CompMatureMorph matureMorph = pawn.GetMorphComp();
-                if (matureMorph != null)
-                {
-                    if (GrabProgress >= 1)
-                    {
-                        matureMorph.TryGrab(Victim);
-                    }
-                }
-            });
             toil.WithProgressBar(TargetIndex.A, () => GrabProgress);
             toil.defaultCompleteMode = ToilCompleteMode.Never;
             toil.WithEffect(EffecterDefOf.Breastfeeding, TargetIndex.A);
