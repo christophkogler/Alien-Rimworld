@@ -643,11 +643,12 @@ namespace Xenomorphtype
         }
         public static Thing SearchRegionsForJellyMakable(Region region, Pawn pawn, CompJellyMaker jellyMaker)
         {
-            if(pawn == null)
+            if(region == null || pawn == null || jellyMaker == null)
             {
                 return null;
             }
             Thing found = null;
+            Dictionary<ThingDef, bool> canMakeIntoJellyByDef = new Dictionary<ThingDef, bool>();
           
             TraverseParms traverseParams = TraverseParms.For(pawn);
 
@@ -662,15 +663,29 @@ namespace Xenomorphtype
                 {
                     Thing thing = list[i];
 
-                    if (jellyMaker.CanMakeIntoJelly(thing) && FeralJobUtility.IsThingAvailableForJobBy(pawn, thing))
+                    if (thing is Corpse corpse && corpse.GetRotStage() == RotStage.Dessicated)
                     {
-                        if(!FeralJobUtility.IsThingAvailableForJobBy(pawn,thing))
-                        {
-                            continue;
-                        }
-                        found = thing;
-                        return true;
+                        continue;
                     }
+
+                    if (!canMakeIntoJellyByDef.TryGetValue(thing.def, out bool canMakeIntoJelly))
+                    {
+                        canMakeIntoJelly = jellyMaker.CanMakeIntoJelly(thing.def);
+                        canMakeIntoJellyByDef[thing.def] = canMakeIntoJelly;
+                    }
+
+                    if (!canMakeIntoJelly)
+                    {
+                        continue;
+                    }
+
+                    if (!FeralJobUtility.IsThingAvailableForJobBy(pawn, thing))
+                    {
+                        continue;
+                    }
+
+                    found = thing;
+                    return true;
                 }
                 return false;
             };
