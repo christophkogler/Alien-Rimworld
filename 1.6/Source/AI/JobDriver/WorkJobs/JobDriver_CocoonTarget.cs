@@ -47,8 +47,31 @@ namespace Xenomorphtype
 
         private bool TryCommitGrab()
         {
-            Pawn actor = pawn;
-            Pawn victim = Victim;
+            if (!TryGetCommitContext(out _, out Pawn victim, out CompMatureMorph matureMorph))
+            {
+                return false;
+            }
+
+            matureMorph.TryGrab(victim);
+            return true;
+        }
+
+        private bool TryCommitCocoon()
+        {
+            if (!TryGetCommitContext(out _, out Pawn victim, out CompMatureMorph matureMorph))
+            {
+                return false;
+            }
+
+            matureMorph.TryCocooning(victim);
+            return true;
+        }
+
+        private bool TryGetCommitContext(out Pawn actor, out Pawn victim, out CompMatureMorph matureMorph)
+        {
+            actor = pawn;
+            victim = Victim;
+            matureMorph = null;
             if (actor == null || actor.Destroyed || actor.Dead || !actor.Spawned || actor.Map == null || actor.mindState == null)
             {
                 return false;
@@ -64,13 +87,12 @@ namespace Xenomorphtype
                 return false;
             }
 
-            CompMatureMorph matureMorph = actor.GetMorphComp();
+            matureMorph = actor.GetMorphComp();
             if (matureMorph == null)
             {
                 return false;
             }
 
-            matureMorph.TryGrab(victim);
             return true;
         }
 
@@ -134,14 +156,14 @@ namespace Xenomorphtype
                     CocoonTicksFinish = XenoBuildingDefOf.Hivemass.statBases.GetStatValueFromList(StatDefOf.WorkToBuild, 10f);
                 }
             };
-            toil.tickAction = delegate
+            toil.tickIntervalAction = delegate (int delta)
             {
                 Pawn actor = pawn;
-                CocoonTicks += 1;
+                CocoonTicks += delta;
                 CocoonProgress = (CocoonTicks / CocoonTicksFinish);
                 if (actor?.needs?.food != null)
                 {
-                    actor.needs.food.CurLevel = actor.needs.food.CurLevel - XMTHiveUtility.HiveHungerCostPerTick;
+                    actor.needs.food.CurLevel = actor.needs.food.CurLevel - XMTHiveUtility.HiveHungerCostPerTick * delta;
 
                     if (actor.needs.food.Starving)
                     {
@@ -149,7 +171,7 @@ namespace Xenomorphtype
 
                         if (Malnutrition != null)
                         {
-                            Malnutrition.Severity += 0.001f;
+                            Malnutrition.Severity += 0.001f * delta;
                             actor.workSettings.Disable(WorkTypeDefOf.Construction);
                         }
                         ReadyForNextToil();
@@ -159,21 +181,16 @@ namespace Xenomorphtype
 
                 if (CocoonTicks >= CocoonTicksFinish)
                 {
+                    if (!TryCommitCocoon())
+                    {
+                        EndJobWith(JobCondition.Incompletable);
+                        return;
+                    }
+
                     ReadyForNextToil();
                 }
 
             };
-            toil.AddFinishAction(delegate
-            {
-                if (CocoonProgress >= 1)
-                {
-                    CompMatureMorph matureMorph = pawn.GetMorphComp();
-                    if (matureMorph != null)
-                    {
-                        matureMorph.TryCocooning(Victim);
-                    }
-                }
-            });
             toil.defaultCompleteMode = ToilCompleteMode.Never;
             toil.WithProgressBar(TargetIndex.A, () => CocoonProgress);
             toil.WithEffect(InternalDefOf.ResinBuild, TargetIndex.A);
