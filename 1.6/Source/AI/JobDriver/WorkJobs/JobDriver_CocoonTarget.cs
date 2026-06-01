@@ -82,7 +82,7 @@ namespace Xenomorphtype
                 return false;
             }
 
-            if (actor.Map != victim.Map || !actor.Position.AdjacentTo(victim.Position))
+            if (actor.Map != victim.Map || !actor.Position.AdjacentTo8WayOrInside(victim.Position))
             {
                 return false;
             }
