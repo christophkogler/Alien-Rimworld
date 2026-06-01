@@ -59,6 +59,66 @@ namespace Xenomorphtype
                 return true;
             }
         }
+
+        private bool TryCommitGrab()
+        {
+            if (!TryGetCommitContext(false, out _, out Pawn victim, out CompMatureMorph matureMorph))
+            {
+                return false;
+            }
+
+            matureMorph.TryGrab(victim);
+            return true;
+        }
+
+        private bool TryCommitCocoon()
+        {
+            if (!TryGetCommitContext(true, out Pawn actor, out Pawn victim, out CompMatureMorph matureMorph))
+            {
+                return false;
+            }
+
+            actor.Map.designationManager.TryRemoveDesignationOn(victim, XenoWorkDefOf.XMT_Abduct);
+            matureMorph.TryCocooning(victim);
+            return true;
+        }
+
+        private bool TryGetCommitContext(bool victimMustBeCarried, out Pawn actor, out Pawn victim, out CompMatureMorph matureMorph)
+        {
+            actor = pawn;
+            victim = Victim;
+            matureMorph = null;
+            if (actor == null || actor.Destroyed || actor.Dead || !actor.Spawned || actor.Map == null || actor.mindState == null)
+            {
+                return false;
+            }
+
+            if (victim == null || victim.Destroyed || victim.Dead || victim.health == null)
+            {
+                return false;
+            }
+
+            if (victimMustBeCarried)
+            {
+                if (victim.CarriedBy != actor)
+                {
+                    return false;
+                }
+            }
+            else if (!victim.Spawned || actor.Map != victim.Map || !actor.Position.AdjacentTo8WayOrInside(victim.Position))
+            {
+                return false;
+            }
+
+            matureMorph = actor.GetMorphComp();
+            if (matureMorph == null)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         protected override IEnumerable<Toil> MakeNewToils()
         {
             this.AddFailCondition(IsNoLongerValidTarget);
@@ -89,20 +149,18 @@ namespace Xenomorphtype
                     }
                 }
             };
-            toil.tickAction = delegate
+            toil.tickIntervalAction = delegate (int delta)
             {
-                GrabTicks+= 1;
+                GrabTicks += delta;
                 GrabProgress = (GrabTicks / GrabTicksFinish);
                 if (GrabTicks >= GrabTicksFinish)
                 {
-                    CompMatureMorph matureMorph = pawn.GetMorphComp();
-                    if (matureMorph != null)
+                    if (!TryCommitGrab())
                     {
-                        if (GrabProgress >= 1 && !FailedGrab)
-                        {
-                            matureMorph.TryGrab(Victim);
-                        }
+                        EndJobWith(JobCondition.Incompletable);
+                        return;
                     }
+
                     ReadyForNextToil();
                 }
                 
@@ -123,14 +181,14 @@ namespace Xenomorphtype
                     CocoonTicksFinish = XenoBuildingDefOf.Hivemass.statBases.GetStatValueFromList(StatDefOf.WorkToBuild, 10f);
                 }
             };
-            toil.tickAction = delegate
+            toil.tickIntervalAction = delegate (int delta)
             {
                 Pawn actor = pawn;
-                CocoonTicks += 1;
+                CocoonTicks += delta;
                 CocoonProgress = (CocoonTicks / CocoonTicksFinish);
                 if (actor?.needs?.food != null)
                 {
-                    actor.needs.food.CurLevel = actor.needs.food.CurLevel - XMTHiveUtility.HiveHungerCostPerTick;
+                    actor.needs.food.CurLevel = actor.needs.food.CurLevel - XMTHiveUtility.HiveHungerCostPerTick * delta;
 
                     if (actor.needs.food.Starving)
                     {
@@ -138,32 +196,26 @@ namespace Xenomorphtype
 
                         if (Malnutrition != null)
                         {
-                            Malnutrition.Severity += 0.001f;
+                            Malnutrition.Severity += 0.001f * delta;
                             actor.workSettings.Disable(WorkTypeDefOf.Construction);
                         }
-                        ReadyForNextToil();
+                        EndJobWith(JobCondition.Incompletable);
                         return;
                     }
                 }
 
                 if (CocoonTicks >= CocoonTicksFinish)
                 {
+                    if (!TryCommitCocoon())
+                    {
+                        EndJobWith(JobCondition.Incompletable);
+                        return;
+                    }
+
                     ReadyForNextToil();
                 }
 
             };
-            toil.AddFinishAction(delegate
-            {
-                if (CocoonProgress >= 1)
-                {
-                    CompMatureMorph matureMorph = pawn.GetMorphComp();
-                    if (matureMorph != null)
-                    {
-                        Victim.MapHeld.designationManager.TryRemoveDesignationOn(Victim, XenoWorkDefOf.XMT_Abduct);
-                        matureMorph.TryCocooning(Victim);
-                    }
-                }
-            });
             toil.defaultCompleteMode = ToilCompleteMode.Never;
             toil.WithProgressBar(TargetIndex.A, () => CocoonProgress);
             toil.WithEffect(InternalDefOf.ResinBuild, TargetIndex.A);
