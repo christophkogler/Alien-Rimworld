@@ -17,6 +17,7 @@ namespace Xenomorphtype {
         private float Ticks = 0;
         private float Progress = 0;
         protected float xpPerTick = 0.085f;
+        private bool BuildingCommitted = false;
         
         public IntVec3 BuildCell
         {
@@ -64,7 +65,7 @@ namespace Xenomorphtype {
                 }
                 Progress = (Ticks / TicksFinish);
 
-                if (!BioUtility.PerformBioconstructionCost(pawn))
+                if (!BioUtility.PerformBioconstructionCost(pawn, delta))
                 {
                     this.FailOnMentalState(TargetIndex.A);
                     return;
@@ -72,22 +73,51 @@ namespace Xenomorphtype {
 
                 if (Ticks >= TicksFinish)
                 {
+                    if (!TryCommitBuilding())
+                    {
+                        EndJobWith(JobCondition.Incompletable);
+                        return;
+                    }
+
                     ReadyForNextToil();
                 }
 
             };
-            toil.AddFinishAction(delegate
-            {
-                if (Progress >= 1)
-                {
-                    Building finishedBuilding = GenSpawn.Spawn(BuildingDef, BuildCell, pawn.Map, WipeMode.FullRefund) as Building;
-                    finishedBuilding.SetFaction(pawn.Faction);
-                }
-            });
             toil.WithProgressBar(TargetIndex.A, () => Progress);
             toil.WithEffect(InternalDefOf.ResinBuild, TargetIndex.A);
             toil.defaultCompleteMode = ToilCompleteMode.Never;
             return toil;
+        }
+
+        private bool TryCommitBuilding()
+        {
+            Pawn actor = pawn;
+            ThingDef buildingDef = BuildingDef;
+            IntVec3 buildCell = BuildCell;
+            if (BuildingCommitted || actor == null || actor.Destroyed || actor.Dead || !actor.Spawned || actor.Map == null)
+            {
+                return false;
+            }
+
+            if (buildingDef == null || buildingDef.category != ThingCategory.Building || !buildCell.InBounds(actor.Map))
+            {
+                return false;
+            }
+
+            if (!actor.Position.AdjacentTo8WayOrInside(buildCell))
+            {
+                return false;
+            }
+
+            Building finishedBuilding = GenSpawn.Spawn(buildingDef, buildCell, actor.Map, WipeMode.FullRefund) as Building;
+            if (finishedBuilding == null)
+            {
+                return false;
+            }
+
+            finishedBuilding.SetFaction(actor.Faction);
+            BuildingCommitted = true;
+            return true;
         }
     }
 }

@@ -1002,11 +1002,11 @@ namespace Xenomorphtype
             return true;
         }
 
-        internal static bool PerformBioconstructionCost(Pawn pawn)
+        internal static bool PerformBioconstructionCost(Pawn pawn, int delta = 1)
         {
             if (pawn?.needs?.food != null)
             {
-                pawn.needs.food.CurLevel = pawn.needs.food.CurLevel - XMTHiveUtility.HiveHungerCostPerTick;
+                pawn.needs.food.CurLevel = pawn.needs.food.CurLevel - XMTHiveUtility.HiveHungerCostPerTick * delta;
 
                 if (pawn.needs.food.Starving)
                 {
@@ -1014,7 +1014,7 @@ namespace Xenomorphtype
 
                     if (Malnutrition != null)
                     {
-                        Malnutrition.Severity += 0.001f;
+                        Malnutrition.Severity += 0.001f * delta;
                         pawn.mindState.mentalStateHandler.TryStartMentalState(XenoMentalStateDefOf.XMT_MurderousRage, "", forced: true, forceWake: true, causedByMood: false, transitionSilently: true);
                         return false;
                     }
