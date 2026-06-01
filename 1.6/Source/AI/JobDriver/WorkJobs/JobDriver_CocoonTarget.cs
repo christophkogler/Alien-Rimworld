@@ -47,7 +47,7 @@ namespace Xenomorphtype
 
         private bool TryCommitGrab()
         {
-            if (!TryGetCommitContext(out _, out Pawn victim, out CompMatureMorph matureMorph))
+            if (!TryGetCommitContext(false, out _, out Pawn victim, out CompMatureMorph matureMorph))
             {
                 return false;
             }
@@ -58,7 +58,7 @@ namespace Xenomorphtype
 
         private bool TryCommitCocoon()
         {
-            if (!TryGetCommitContext(out _, out Pawn victim, out CompMatureMorph matureMorph))
+            if (!TryGetCommitContext(true, out _, out Pawn victim, out CompMatureMorph matureMorph))
             {
                 return false;
             }
@@ -67,7 +67,7 @@ namespace Xenomorphtype
             return true;
         }
 
-        private bool TryGetCommitContext(out Pawn actor, out Pawn victim, out CompMatureMorph matureMorph)
+        private bool TryGetCommitContext(bool victimMustBeCarried, out Pawn actor, out Pawn victim, out CompMatureMorph matureMorph)
         {
             actor = pawn;
             victim = Victim;
@@ -77,12 +77,19 @@ namespace Xenomorphtype
                 return false;
             }
 
-            if (victim == null || victim.Destroyed || victim.Dead || !victim.Spawned || victim.health == null)
+            if (victim == null || victim.Destroyed || victim.Dead || victim.health == null)
             {
                 return false;
             }
 
-            if (actor.Map != victim.Map || !actor.Position.AdjacentTo8WayOrInside(victim.Position))
+            if (victimMustBeCarried)
+            {
+                if (victim.CarriedBy != actor)
+                {
+                    return false;
+                }
+            }
+            else if (!victim.Spawned || actor.Map != victim.Map || !actor.Position.AdjacentTo8WayOrInside(victim.Position))
             {
                 return false;
             }
@@ -104,6 +111,7 @@ namespace Xenomorphtype
             this.FailOnAggroMentalState(TargetIndex.A);
             yield return Toils_Goto.GotoThing(TargetIndex.A, PathEndMode.ClosestTouch);
             yield return AttemptGrab();
+            yield return Toils_Haul.StartCarryThing(TargetIndex.A);
             yield return AttemptCocoon();
         }
 
