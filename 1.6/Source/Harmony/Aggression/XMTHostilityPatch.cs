@@ -99,6 +99,13 @@ namespace Xenomorphtype
             [HarmonyPrefix]
             public static bool Prefix(Thing a, Thing b, ref bool __result)
             {
+                if (XMTUtility.IsXenomorph(a) && XMTUtility.IsXenomorph(b)
+                    && !XMTUtility.IsExplicitXenoMeleeTarget(a as Pawn, b)
+                    && !XMTUtility.IsExplicitXenoMeleeTarget(b as Pawn, a))
+                {
+                    __result = false;
+                    return false;
+                }
 
                 if (XMTUtility.IsXenomorph(a))
                 {
@@ -237,4 +244,3 @@ namespace Xenomorphtype
 
     }
 }
-
