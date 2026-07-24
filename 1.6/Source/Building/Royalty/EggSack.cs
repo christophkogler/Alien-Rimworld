@@ -494,7 +494,10 @@ namespace Xenomorphtype
                     }
                 }
 
-                Occupant.needs.mood.CurLevel += 0.1f;
+                if (Occupant.needs.mood != null)
+                {
+                    Occupant.needs.mood.CurLevel += 0.1f;
+                }
             }
             
             if (usesFood)
