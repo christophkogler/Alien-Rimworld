@@ -37,15 +37,16 @@ namespace Xenomorphtype
             Toil toil = Toils_Goto.GotoThing(TargetIndex.A, PathEndMode.ClosestTouch).FailOn(() => Find.TickManager.TicksGame > startTick + 5000 && (float)(job.GetTarget(TargetIndex.A).Cell - pawn.Position).LengthHorizontalSquared > 4f);
             yield return toil;
             yield return AttemptInjection();
+            yield return CompleteInjection();
         }
 
         private Toil AttemptInjection()
         {
             Toil toil = ToilMaker.MakeToil("AttemptGrab");
             toil.atomicWithPrevious = true;
-            toil.tickAction = delegate
+            toil.tickIntervalAction = delegate (int delta)
             {
-                Ticks += 1;
+                Ticks += delta;
                 Progress = (Ticks / TicksFinish);
                 if (Ticks >= TicksFinish)
                 {
@@ -53,21 +54,36 @@ namespace Xenomorphtype
                 }
 
             };
-            toil.AddFinishAction(delegate
-            {
-                if (Progress >= 1)
-                {
-                    Pawn prey = Prey;
-                    CompMatureMorph matureMorph = pawn.GetMorphComp();
-                    if (matureMorph != null)
-                    {
-                        matureMorph.TryOvomorphing(prey);
-                    }
-                }
-            });
             toil.WithProgressBar(TargetIndex.A, () => Progress);
             toil.WithEffect(EffecterDefOf.Surgery, TargetIndex.A);
             toil.defaultCompleteMode = ToilCompleteMode.Never;
+            return toil;
+        }
+
+        private Toil CompleteInjection()
+        {
+            Toil toil = ToilMaker.MakeToil("CompleteInjection");
+            toil.defaultCompleteMode = ToilCompleteMode.Instant;
+            toil.initAction = delegate
+            {
+                Pawn actor = toil.GetActor();
+                Pawn prey = actor?.CurJob.GetTarget(TargetIndex.A).Thing as Pawn;
+
+                if (actor == null || actor.Destroyed || actor.Map == null || prey == null || prey.Destroyed || prey.Map == null || prey.Map != actor.Map || XMTUtility.HasEmbryo(prey))
+                {
+                    actor?.jobs.EndCurrentJob(JobCondition.Incompletable);
+                    return;
+                }
+
+                CompMatureMorph matureMorph = actor.GetMorphComp();
+                if (matureMorph == null)
+                {
+                    actor.jobs.EndCurrentJob(JobCondition.Incompletable);
+                    return;
+                }
+
+                matureMorph.TryOvomorphing(prey);
+            };
             return toil;
         }
     }
