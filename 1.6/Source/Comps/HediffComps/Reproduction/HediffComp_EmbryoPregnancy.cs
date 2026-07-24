@@ -283,7 +283,7 @@ namespace Xenomorphtype
                                                         where
                                                         x.IsInGroup(InternalDefOf.StarbeastTailAttackTool)
                                                         select x;
-                foreach (BodyPartRecord tailpart in tailparts)
+                foreach (BodyPartRecord tailpart in XMTUtility.NonOverlappingBodyParts(tailparts))
                 {
                     Hediff maturityHediff = HediffMaker.MakeHediff(InternalDefOf.Overdeveloped, child, tailpart);
                     maturityHediff.Severity = 0.001f;
@@ -300,7 +300,7 @@ namespace Xenomorphtype
                                                      || x.IsInGroup(ExternalDefOf.Neck)
                                                      select x;
 
-                foreach(BodyPartRecord part in headparts)
+                foreach(BodyPartRecord part in XMTUtility.NonOverlappingBodyParts(headparts))
                 {
                    Hediff maturityHediff = HediffMaker.MakeHediff(InternalDefOf.Undeveloped, child, part);
                    maturityHediff.Severity = headMaturity;
@@ -318,7 +318,7 @@ namespace Xenomorphtype
                                                      && !x.IsInGroup(InternalDefOf.StarbeastTailAttackTool)
                                                         select x;
 
-                foreach (BodyPartRecord part in coreparts)
+                foreach (BodyPartRecord part in XMTUtility.NonOverlappingBodyParts(coreparts))
                 {
                     Hediff maturityHediff = HediffMaker.MakeHediff(InternalDefOf.Undeveloped, child, part);
                     maturityHediff.Severity = coreMaturity;
@@ -335,7 +335,7 @@ namespace Xenomorphtype
                                                      && !x.IsInGroup(InternalDefOf.StarbeastTailAttackTool)
                                                        select x;
 
-                foreach( BodyPartRecord part in legparts)
+                foreach( BodyPartRecord part in XMTUtility.NonOverlappingBodyParts(legparts))
                 {
                     Hediff maturityHediff = HediffMaker.MakeHediff(InternalDefOf.Undeveloped, child, part);
                     maturityHediff.Severity = legMaturity;
@@ -353,7 +353,7 @@ namespace Xenomorphtype
                                                      || x.IsInGroup(ExternalDefOf.Hands))
                                                      && !x.IsInGroup(InternalDefOf.StarbeastTailAttackTool)
                                                      select x;
-                foreach(BodyPartRecord part in armparts)
+                foreach(BodyPartRecord part in XMTUtility.NonOverlappingBodyParts(armparts))
                 {
                     Hediff maturityHediff = HediffMaker.MakeHediff(InternalDefOf.Undeveloped, child, part);
                     maturityHediff.Severity = armMaturity;
@@ -436,4 +436,3 @@ namespace Xenomorphtype
         }
     }
 }
-

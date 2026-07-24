@@ -87,6 +87,7 @@ namespace Xenomorphtype
                     {
                         part.Severity += 0.5f;
                     }
+                    XMTUtility.CleanupDevelopmentHediffs(pawn);
                     refuelable.ConsumeFuel(25);
                     return true;
                 }
@@ -133,6 +134,7 @@ namespace Xenomorphtype
                     {
                         part.Severity += 0.1f;
                     }
+                    XMTUtility.CleanupDevelopmentHediffs(pawn);
                     refuelable.ConsumeFuel(25);
                     return true;
                 }
